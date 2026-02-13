@@ -1,0 +1,9 @@
+# kubeconfig files (contains secrets)
+*.kubeconfig
+
+# istioctl downloaded folder
+istio-*/
+
+# temporary files
+*.tmp
+*.bak
