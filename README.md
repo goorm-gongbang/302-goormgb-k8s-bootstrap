@@ -1,94 +1,155 @@
 # 302-goormgb-k8s-bootstrap
 
-k3s 클러스터와 ArgoCD 부트스트랩을 위한 최소한의 스크립트.
+> **GitHub**: [goorm-gongbang/302-goormgb-k8s-bootstrap](https://github.com/goorm-gongbang/302-goormgb-k8s-bootstrap)
 
-## 개요
+k3s 클러스터에 ArgoCD 환경을 구성하는 부트스트랩 스크립트.
 
-이 레포는 **미니PC에 직접 clone**하여 초기 설정에만 사용합니다.
-이후 모든 배포는 ArgoCD가 [303-goormgb-k8s-helm](https://github.com/goorm-gongbang/303-goormgb-k8s-helm) 레포를 watch하여 처리합니다.
+## 레포 관계도
 
 ```
-[이 레포]                    [helm 레포]
-k8s-bootstrap               303-goormgb-k8s-helm
-    │                            │
-    │ 수동 실행                    │ ArgoCD가 watch
-    ▼                            ▼
-┌─────────────────────────────────────────┐
-│           k3s Cluster (MiniPC)          │
-│  ┌─────────┐                            │
-│  │ ArgoCD  │ ──── sync ───► Helm Apps   │
-│  └─────────┘                            │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         goorm-gongbang Organization                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌──────────────────────────┐       ┌──────────────────────────┐        │
+│  │ 302-goormgb-k8s-bootstrap│       │ 303-goormgb-k8s-helm     │        │
+│  │ (이 레포)                 │       │                          │        │
+│  ├──────────────────────────┤       ├──────────────────────────┤        │
+│  │ • MiniPC에 clone         │       │ • ArgoCD가 watch         │        │
+│  │ • 1회성 부트스트랩        │       │ • 지속적 GitOps          │        │
+│  │ • 수동 실행              │       │ • Git push → 자동 배포    │        │
+│  └───────────┬──────────────┘       └──────────────┬───────────┘        │
+│              │                                      │                    │
+│              │ make install-all                     │ ArgoCD sync        │
+│              ▼                                      ▼                    │
+│  ┌──────────────────────────────────────────────────────────────┐       │
+│  │                    k3s Cluster (MiniPC)                       │       │
+│  │  ┌─────────────────────────────────────────────────────────┐ │       │
+│  │  │ Bootstrap 설치:                                          │ │       │
+│  │  │  • ESO (External Secrets Operator)                      │ │       │
+│  │  │  • cert-manager                                         │ │       │
+│  │  │  • Istio                                                │ │       │
+│  │  │  • ArgoCD ◄─────── Root App 등록                        │ │       │
+│  │  └─────────────────────────────────────────────────────────┘ │       │
+│  │                           │                                   │       │
+│  │                           ▼                                   │       │
+│  │  ┌─────────────────────────────────────────────────────────┐ │       │
+│  │  │ ArgoCD가 303 레포에서 자동 배포:                         │ │       │
+│  │  │  • PostgreSQL, Redis                                    │ │       │
+│  │  │  • DDNS (Route53)                                       │ │       │
+│  │  │  • ArgoCD 추가 설정 (OAuth, Gateway)                    │ │       │
+│  │  │  • 앱 배포 (frontend, api 등)                           │ │       │
+│  │  └─────────────────────────────────────────────────────────┘ │       │
+│  └──────────────────────────────────────────────────────────────┘       │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+## 워크플로우
+
+```
+1. MiniPC에 k3s 설치 (별도)
+        │
+        ▼
+2. 이 레포 clone
+   git clone https://github.com/goorm-gongbang/302-goormgb-k8s-bootstrap.git
+        │
+        ▼
+3. Bootstrap 실행
+   sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml make install-all
+        │
+        ├── ESO 설치
+        ├── AWS credentials 등록
+        ├── cert-manager 설치
+        ├── Istio 설치
+        ├── ArgoCD 설치
+        ├── Root Application 배포 ──────► ArgoCD가 303 레포 watch 시작
+        └── DDNS 업데이트
+        │
+        ▼
+4. 이후 모든 변경은 303-goormgb-k8s-helm 레포에서!
+   - Git push → ArgoCD 자동 sync
 ```
 
 ## 사용법
 
-### 1. 초기 설치 (순서대로)
+### 전체 설치 (권장)
 
 ```bash
-# k3s 설치 (별도 - curl 명령)
-curl -sfL https://get.k3s.io | sh -
+git clone https://github.com/goorm-gongbang/302-goormgb-k8s-bootstrap.git
+cd 302-goormgb-k8s-bootstrap
 
-# istio 설치
-./scripts/istio/install.sh
-
-# cert-manager 설치
-./scripts/cert-manager/install.sh
-
-# ESO 설치 및 AWS credentials 등록
-./scripts/eso/install.sh
-./scripts/eso/bootstrap-aws.sh
-
-# ArgoCD 설치
-./scripts/argocd/install.sh
-
-# RBAC 사용자 생성 (선택)
-./scripts/rbac/create-all-users.sh
+# admin 권한으로 실행
+sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml make install-all
 ```
 
-### 2. ArgoCD App of Apps 등록
+### 개별 설치
 
 ```bash
-kubectl apply -f argocd-apps/root-application.yaml
+make help              # 명령어 목록
+
+make install-eso       # External Secrets Operator
+make bootstrap-aws     # AWS credentials 등록 (대화형)
+make install-cert-manager
+make install-istio
+make install-argocd
+make deploy-root-app   # ArgoCD Root Application
+make run-ddns          # DDNS 업데이트
 ```
 
-이후 ArgoCD가 helm 레포를 sync하여 모든 앱을 배포합니다.
-
-### 3. 정리 (초기화)
+### 유틸리티
 
 ```bash
-./scripts/k3s/clean-all.sh
+make ddns-update       # DDNS 수동 업데이트
+make ddns-test         # Route53 API 테스트
+make rbac-create-users # 팀원 kubeconfig 생성
+make clean-all         # 전체 초기화 (k3s 유지)
 ```
 
 ## 디렉토리 구조
 
 ```
 .
+├── Makefile                    # 설치 명령어 모음
 ├── scripts/
-│   ├── argocd/
-│   │   └── install.sh           # ArgoCD Helm 설치
-│   ├── cert-manager/
-│   │   └── install.sh           # cert-manager Helm 설치
+│   ├── argocd/install.sh       # ArgoCD Helm 설치
+│   ├── cert-manager/install.sh # cert-manager 설치
 │   ├── eso/
-│   │   ├── install.sh           # External Secrets Operator 설치
-│   │   └── bootstrap-aws.sh     # AWS credentials 부트스트랩
+│   │   ├── install.sh          # ESO 설치
+│   │   └── bootstrap-aws.sh    # AWS credentials 등록
 │   ├── istio/
-│   │   ├── install.sh           # Istio 설치
-│   │   ├── uninstall.sh         # Istio 제거
-│   │   └── fix-port-conflict.sh # 포트 충돌 해결
+│   │   ├── install.sh          # Istio 설치
+│   │   ├── uninstall.sh
+│   │   └── fix-port-conflict.sh
 │   ├── k3s/
-│   │   ├── clean-all.sh         # 전체 초기화
-│   │   └── disable-traefik.sh   # Traefik 비활성화
+│   │   ├── clean-all.sh        # 전체 초기화
+│   │   └── disable-traefik.sh
 │   ├── rbac/
-│   │   ├── create-all-users.sh      # 팀원 kubeconfig 일괄 생성
-│   │   └── create-user-kubeconfig.sh # 개별 kubeconfig 생성
+│   │   ├── create-all-users.sh
+│   │   └── create-user-kubeconfig.sh
 │   └── ddns/
-│       ├── test-api.sh          # Route53 API 테스트
-│       └── update-now.sh        # DDNS 수동 업데이트
-└── argocd-apps/
-    └── root-application.yaml    # App of Apps 루트
+│       ├── test-api.sh
+│       └── update-now.sh
+└── argocd/
+    └── root-application.yaml   # App of Apps 루트 (303 레포를 가리킴)
 ```
 
 ## 관련 레포
 
-- **303-goormgb-k8s-helm**: Helm 차트 및 ArgoCD 앱 정의
+| 레포 | 용도 | 실행 위치 |
+|------|------|----------|
+| **302-goormgb-k8s-bootstrap** (이 레포) | ArgoCD 환경 부트스트랩 | MiniPC에서 1회 |
+| [303-goormgb-k8s-helm](https://github.com/goorm-gongbang/303-goormgb-k8s-helm) | Helm 차트 + GitOps | ArgoCD가 watch |
+
+## 설치 후 확인
+
+```bash
+# ArgoCD UI 접속
+https://argocd.goormgb.space
+
+# admin 비밀번호
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+
+# Application 상태 확인
+kubectl get applications -n argocd
+```
