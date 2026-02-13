@@ -50,13 +50,48 @@ for NS in "${!SECRETS[@]}"; do
   # 기존 secret 삭제 (있으면)
   kubectl delete secret "$SECRET_NAME" -n "$NS" 2>/dev/null || true
 
-  kubectl create secret generic "$SECRET_NAME" \
-    --from-literal=access-key-id="$AWS_ACCESS_KEY_ID" \
-    --from-literal=secret-access-key="$AWS_SECRET_ACCESS_KEY" \
-    -n "$NS"
+  # ESO는 access-key, 나머지는 access-key-id 사용
+  if [ "$NS" = "external-secrets" ]; then
+    kubectl create secret generic "$SECRET_NAME" \
+      --from-literal=access-key="$AWS_ACCESS_KEY_ID" \
+      --from-literal=secret-access-key="$AWS_SECRET_ACCESS_KEY" \
+      -n "$NS"
+  else
+    kubectl create secret generic "$SECRET_NAME" \
+      --from-literal=access-key-id="$AWS_ACCESS_KEY_ID" \
+      --from-literal=secret-access-key="$AWS_SECRET_ACCESS_KEY" \
+      -n "$NS"
+  fi
 
   echo "  Created: ${NS}/${SECRET_NAME}"
 done
+
+echo ""
+echo "=== Creating ClusterSecretStore ==="
+
+cat <<EOF | kubectl apply -f -
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: aws-secrets-manager
+spec:
+  provider:
+    aws:
+      service: SecretsManager
+      region: ${AWS_REGION:-ap-northeast-2}
+      auth:
+        secretRef:
+          accessKeyIDSecretRef:
+            name: eso-aws-credentials
+            namespace: external-secrets
+            key: access-key
+          secretAccessKeySecretRef:
+            name: eso-aws-credentials
+            namespace: external-secrets
+            key: secret-access-key
+EOF
+
+echo "  Created: ClusterSecretStore/aws-secrets-manager"
 
 echo ""
 echo "Bootstrap complete."

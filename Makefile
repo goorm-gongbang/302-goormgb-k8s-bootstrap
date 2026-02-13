@@ -2,7 +2,7 @@
 # k3s 클러스터 초기 설정을 위한 명령어 모음
 
 .PHONY: help install-all install-eso install-cert-manager install-istio install-argocd \
-        deploy-root-app wait-sync run-ddns clean-all disable-traefik fix-port-conflict \
+        deploy-root-app setup-github-ssh wait-sync run-ddns clean-all disable-traefik fix-port-conflict \
         rbac-create-users ddns-test ddns-update
 
 # 기본 타겟
@@ -18,6 +18,7 @@ help:
 	@echo "  make install-cert-manager - cert-manager 설치"
 	@echo "  make install-istio     - Istio 설치"
 	@echo "  make install-argocd    - ArgoCD 설치"
+	@echo "  make setup-github-ssh  - GitHub SSH Key 설정 (ExternalSecret)"
 	@echo "  make deploy-root-app   - ArgoCD Root Application 배포"
 	@echo ""
 	@echo "유틸리티:"
@@ -31,7 +32,7 @@ help:
 	@echo "  make clean-all         - 전체 초기화 (k3s 유지, 내부만 삭제)"
 
 # === 전체 설치 ===
-install-all: install-eso bootstrap-aws install-cert-manager install-istio install-argocd deploy-root-app wait-sync run-ddns
+install-all: install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app wait-sync run-ddns
 	@echo ""
 	@echo "=== All components installed ==="
 	@echo ""
@@ -69,6 +70,13 @@ install-istio:
 install-argocd:
 	@echo "=== Installing ArgoCD ==="
 	./scripts/argocd/install.sh
+
+setup-github-ssh:
+	@echo "=== Setting up GitHub SSH Key (ExternalSecret) ==="
+	kubectl apply -f argo-init/external-secret-github.yaml
+	@echo "Waiting for ExternalSecret to sync..."
+	@sleep 5
+	@kubectl get externalsecret repo-goormgb-helm -n argocd || echo "ExternalSecret not ready yet. Check: kubectl get externalsecret -n argocd"
 
 deploy-root-app:
 	@echo "=== Deploying Root Application ==="
