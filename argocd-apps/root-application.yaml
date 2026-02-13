@@ -12,7 +12,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/goorm-gongbang/302-goormgb.git
+    repoURL: https://github.com/goorm-gongbang/303-goormgb-k8s-helm.git
     targetRevision: main
     path: argocd-apps
   destination:

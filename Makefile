@@ -2,7 +2,7 @@
 # k3s 클러스터 초기 설정을 위한 명령어 모음
 
 .PHONY: help install-all install-eso install-cert-manager install-istio install-argocd \
-        deploy-root-app clean-all disable-traefik fix-port-conflict \
+        deploy-root-app wait-sync run-ddns clean-all disable-traefik fix-port-conflict \
         rbac-create-users ddns-test ddns-update
 
 # 기본 타겟
@@ -31,13 +31,23 @@ help:
 	@echo "  make clean-all         - 전체 초기화 (k3s 유지, 내부만 삭제)"
 
 # === 전체 설치 ===
-install-all: install-eso bootstrap-aws install-cert-manager install-istio install-argocd deploy-root-app
+install-all: install-eso bootstrap-aws install-cert-manager install-istio install-argocd deploy-root-app wait-sync run-ddns
 	@echo ""
 	@echo "=== All components installed ==="
 	@echo ""
 	@echo "ArgoCD UI:"
-	@echo "  URL: https://argocd.goormgb.space (Istio Gateway 설정 후)"
+	@echo "  URL: https://argocd.goormgb.space"
 	@echo "  Password: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
+
+wait-sync:
+	@echo "=== Waiting for ArgoCD to sync apps (60s) ==="
+	@sleep 10
+	@kubectl wait --for=condition=Healthy application/root -n argocd --timeout=60s 2>/dev/null || true
+	@kubectl wait --for=condition=Healthy application/ddns-route53 -n argocd --timeout=60s 2>/dev/null || echo "DDNS app not synced yet, continuing..."
+
+run-ddns:
+	@echo "=== Running DDNS Update ==="
+	@./scripts/ddns/update-now.sh || echo "DDNS update skipped (CronJob may not be ready yet). Run 'make ddns-update' later."
 
 # === 개별 설치 ===
 install-eso:

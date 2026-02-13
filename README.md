@@ -5,11 +5,11 @@ k3s 클러스터와 ArgoCD 부트스트랩을 위한 최소한의 스크립트.
 ## 개요
 
 이 레포는 **미니PC에 직접 clone**하여 초기 설정에만 사용합니다.
-이후 모든 배포는 ArgoCD가 [302-goormgb-helm](https://github.com/goorm-gongbang/302-goormgb-helm) 레포를 watch하여 처리합니다.
+이후 모든 배포는 ArgoCD가 [303-goormgb-k8s-helm](https://github.com/goorm-gongbang/303-goormgb-k8s-helm) 레포를 watch하여 처리합니다.
 
 ```
 [이 레포]                    [helm 레포]
-k8s-bootstrap               302-goormgb-helm
+k8s-bootstrap               303-goormgb-k8s-helm
     │                            │
     │ 수동 실행                    │ ArgoCD가 watch
     ▼                            ▼
@@ -91,4 +91,4 @@ kubectl apply -f argocd-apps/root-application.yaml
 
 ## 관련 레포
 
-- **302-goormgb-helm**: Helm 차트 및 ArgoCD 앱 정의
+- **303-goormgb-k8s-helm**: Helm 차트 및 ArgoCD 앱 정의
