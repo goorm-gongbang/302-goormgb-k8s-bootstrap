@@ -36,7 +36,7 @@ install-all: install-eso bootstrap-aws install-cert-manager install-istio instal
 	@echo "=== All components installed ==="
 	@echo ""
 	@echo "ArgoCD UI:"
-	@echo "  URL: https://argocd.goormgb.space Istio Gateway 설정 후)"
+	@echo "  URL: https://argocd.goormgb.space (Istio Gateway 설정 후)"
 	@echo "  Password: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
 
 # === 개별 설치 ===
