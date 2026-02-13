@@ -72,7 +72,7 @@ install-argocd:
 
 deploy-root-app:
 	@echo "=== Deploying Root Application ==="
-	kubectl apply -f argocd/root-application.yaml
+	kubectl apply -f argo-init/root-application.yaml
 	@echo ""
 	@echo "Root Application deployed. ArgoCD will sync all apps from helm repo."
 
