@@ -6,7 +6,7 @@ set -euo pipefail
 #
 # Usage: ./scripts/k3s/clean-all.sh
 
-NAMESPACES="dev staging data argocd cert-manager external-secrets istio-system"
+NAMESPACES="dev data argocd cert-manager external-secrets istio-system"
 NS_DELETE_TIMEOUT=30  # 초
 
 force_delete_ns() {
@@ -20,7 +20,7 @@ force_delete_ns() {
 echo "=== k3s Clean All ==="
 echo ""
 echo "This will REMOVE:"
-echo "  - All app Helm releases (dev, staging)"
+echo "  - All app Helm releases (dev)"
 echo "  - All infra Helm releases (ArgoCD, DDNS, WAF, cert-manager, ESO)"
 echo "  - Istio"
 echo "  - All related namespaces"
@@ -37,11 +37,6 @@ echo "--- Removing app releases ---"
 for release in $(helm list -n dev -q 2>/dev/null); do
   echo "  Removing $release from dev..."
   helm uninstall "$release" -n dev 2>/dev/null || true
-done
-# staging namespace의 모든 helm release 삭제
-for release in $(helm list -n staging -q 2>/dev/null); do
-  echo "  Removing $release from staging..."
-  helm uninstall "$release" -n staging 2>/dev/null || true
 done
 
 echo ""
@@ -95,4 +90,4 @@ echo "  1. ./scripts/eso/install.sh && ./scripts/eso/bootstrap-aws.sh"
 echo "  2. ./scripts/cert-manager/install.sh"
 echo "  3. ./scripts/istio/install.sh"
 echo "  4. ./scripts/argocd/install.sh"
-echo "  5. kubectl apply -f argocd-apps/root-application.yaml"
+echo "  5. kubectl apply -f argo-init/root-application.yaml"

@@ -1,11 +1,11 @@
-# App of Apps - Root Application
-# ArgoCD가 이 앱을 통해 helm repo의 모든 앱을 관리합니다.
+# App of Apps - Root Application (k3s)
+# k3s 클러스터의 ArgoCD가 이 앱을 통해 helm repo의 k3s용 앱들을 관리합니다.
 #
-# Usage: kubectl apply -f argocd-apps/root-application.yaml
+# Usage: kubectl apply -f argo-init/root-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: root
+  name: root-k3s
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -13,8 +13,8 @@ spec:
   project: default
   source:
     repoURL: https://github.com/goorm-gongbang/303-goormgb-k8s-helm.git
-    targetRevision: main
-    path: argocd-apps
+    targetRevision: argocd-sync/k3s
+    path: k3s/apps
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
