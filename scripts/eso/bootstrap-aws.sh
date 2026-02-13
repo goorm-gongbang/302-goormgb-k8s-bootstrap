@@ -78,7 +78,7 @@ spec:
   provider:
     aws:
       service: SecretsManager
-      region: ap-northeast-2
+      region: ${AWS_REGION:-ap-northeast-2}
       auth:
         secretRef:
           accessKeyIDSecretRef:
