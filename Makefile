@@ -38,7 +38,7 @@ install-all: install-eso bootstrap-aws install-cert-manager install-istio instal
 	@echo ""
 	@echo "ArgoCD UI:"
 	@echo "  URL: https://argocd.goormgb.space"
-	@echo "  Password: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
+	@echo "  Login: Google OAuth (등록된 이메일만 접근 가능)"
 
 wait-sync:
 	@echo "=== Waiting for ArgoCD to sync apps (60s) ==="
