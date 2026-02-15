@@ -45,6 +45,13 @@ if [[ ! "$CONFIRM" =~ ^[yY]$ ]]; then
 fi
 
 echo ""
+echo "--- Removing ArgoCD Applications (to prevent auto-sync) ---"
+# ArgoCD Application 먼저 삭제해야 helm uninstall 후 재생성 방지
+kubectl delete applications.argoproj.io --all -n argocd 2>/dev/null || true
+kubectl delete applicationsets.argoproj.io --all -n argocd 2>/dev/null || true
+sleep 3
+
+echo ""
 echo "--- Removing app releases ---"
 # dev-app namespace의 모든 helm release 삭제
 for release in $(helm list -n dev-app -q 2>/dev/null); do
@@ -96,6 +103,16 @@ echo "--- Removing Istio ---"
 if command -v istioctl &>/dev/null; then
   istioctl uninstall --purge -y 2>/dev/null || true
 fi
+
+echo ""
+echo "--- Force deleting remaining resources in namespaces ---"
+for ns in $NAMESPACES; do
+  if kubectl get ns "$ns" &>/dev/null; then
+    kubectl delete all --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+    kubectl delete pvc --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+    kubectl delete externalsecrets.external-secrets.io --all -n "$ns" 2>/dev/null || true
+  fi
+done
 
 echo ""
 echo "--- Deleting namespaces (timeout: ${NS_DELETE_TIMEOUT}s per ns) ---"
