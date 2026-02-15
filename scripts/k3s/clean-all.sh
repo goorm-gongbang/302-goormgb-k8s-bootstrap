@@ -66,43 +66,54 @@ done
 
 echo ""
 echo "--- Removing Data Services (PostgreSQL, Redis) ---"
-helm uninstall postgresql -n data 2>/dev/null || true
-helm uninstall redis -n data 2>/dev/null || true
+helm uninstall postgresql -n data --no-hooks 2>/dev/null || true
+helm uninstall redis -n data --no-hooks 2>/dev/null || true
+kubectl delete secret -n data -l owner=helm 2>/dev/null || true
 
 echo ""
 echo "--- Removing Monitoring Stack ---"
-helm uninstall prometheus-stack -n monitoring 2>/dev/null || true
-helm uninstall loki -n monitoring 2>/dev/null || true
-helm uninstall tempo -n monitoring 2>/dev/null || true
+helm uninstall prometheus-stack -n monitoring --no-hooks 2>/dev/null || true
+helm uninstall loki -n monitoring --no-hooks 2>/dev/null || true
+helm uninstall tempo -n monitoring --no-hooks 2>/dev/null || true
+kubectl delete secret -n monitoring -l owner=helm 2>/dev/null || true
 
 echo ""
 echo "--- Removing ArgoCD ---"
-helm uninstall argocd-config -n argocd 2>/dev/null || true
-helm uninstall argocd -n argocd 2>/dev/null || true
+helm uninstall argocd-config -n argocd --no-hooks 2>/dev/null || true
+helm uninstall argocd -n argocd --no-hooks 2>/dev/null || true
+# helm release secret 정리 (pending-upgrade 방지)
+kubectl delete secret -n argocd -l owner=helm 2>/dev/null || true
 
 echo ""
 echo "--- Removing DDNS ---"
-helm uninstall ddns-route53 -n kube-system 2>/dev/null || true
+helm uninstall ddns-route53 -n kube-system --no-hooks 2>/dev/null || true
 
 echo ""
 echo "--- Removing WAF ---"
-helm uninstall waf -n istio-system 2>/dev/null || true
+helm uninstall waf -n istio-system --no-hooks 2>/dev/null || true
 
 echo ""
 echo "--- Removing cert-manager ---"
-helm uninstall cert-manager-config -n cert-manager 2>/dev/null || true
-helm uninstall cert-manager -n cert-manager 2>/dev/null || true
+helm uninstall cert-manager-config -n cert-manager --no-hooks 2>/dev/null || true
+helm uninstall cert-manager -n cert-manager --no-hooks 2>/dev/null || true
+kubectl delete secret -n cert-manager -l owner=helm 2>/dev/null || true
 
 echo ""
 echo "--- Removing ESO ---"
-helm uninstall eso-config -n external-secrets 2>/dev/null || true
-helm uninstall external-secrets -n external-secrets 2>/dev/null || true
+helm uninstall eso-config -n external-secrets --no-hooks 2>/dev/null || true
+helm uninstall external-secrets -n external-secrets --no-hooks 2>/dev/null || true
+kubectl delete secret -n external-secrets -l owner=helm 2>/dev/null || true
+
+echo ""
+echo "--- Removing kube-system helm secrets ---"
+kubectl delete secret -n kube-system -l owner=helm 2>/dev/null || true
 
 echo ""
 echo "--- Removing Istio ---"
 if command -v istioctl &>/dev/null; then
   istioctl uninstall --purge -y 2>/dev/null || true
 fi
+kubectl delete secret -n istio-system -l owner=helm 2>/dev/null || true
 
 echo ""
 echo "--- Force deleting remaining resources in namespaces ---"
