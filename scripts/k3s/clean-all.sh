@@ -6,7 +6,7 @@ set -euo pipefail
 #
 # Usage: ./scripts/k3s/clean-all.sh
 
-NAMESPACES="dev data argocd cert-manager external-secrets istio-system"
+NAMESPACES="dev-app dev data argocd cert-manager external-secrets istio-system monitoring staging"
 NS_DELETE_TIMEOUT=30  # 초
 
 force_delete_ns() {
@@ -33,7 +33,12 @@ fi
 
 echo ""
 echo "--- Removing app releases ---"
-# dev namespace의 모든 helm release 삭제
+# dev-app namespace의 모든 helm release 삭제
+for release in $(helm list -n dev-app -q 2>/dev/null); do
+  echo "  Removing $release from dev-app..."
+  helm uninstall "$release" -n dev-app 2>/dev/null || true
+done
+# 구버전 dev namespace도 정리
 for release in $(helm list -n dev -q 2>/dev/null); do
   echo "  Removing $release from dev..."
   helm uninstall "$release" -n dev 2>/dev/null || true
@@ -43,6 +48,12 @@ echo ""
 echo "--- Removing Data Services (PostgreSQL, Redis) ---"
 helm uninstall postgresql -n data 2>/dev/null || true
 helm uninstall redis -n data 2>/dev/null || true
+
+echo ""
+echo "--- Removing Monitoring Stack ---"
+helm uninstall prometheus-stack -n monitoring 2>/dev/null || true
+helm uninstall loki -n monitoring 2>/dev/null || true
+helm uninstall tempo -n monitoring 2>/dev/null || true
 
 echo ""
 echo "--- Removing ArgoCD ---"
