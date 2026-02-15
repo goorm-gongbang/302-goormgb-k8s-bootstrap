@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# k3s 클러스터 완전 초기화 (삭제 후 재설치)
-# Usage: ./scripts/k3s/reset.sh
+# kubeadm 클러스터 초기화 (리셋)
+# Usage: ./scripts/k3s/clean-cluster.sh
+# Note: 스크립트 위치는 k3s 폴더지만 kubeadm용으로 변경됨
 
-echo "=== k3s Reset ==="
+echo "=== kubeadm Reset ==="
 echo ""
-echo "This will COMPLETELY RESET the k3s cluster:"
-echo "  - Uninstall k3s (all data lost)"
-echo "  - Reinstall k3s"
-echo "  - Reconfigure kubeconfig"
+echo "This will COMPLETELY RESET the kubeadm cluster:"
+echo "  - kubeadm reset (all data lost)"
+echo "  - Remove CNI configs"
+echo "  - Clean iptables"
 echo ""
 read -rp "Are you sure? [y/N]: " CONFIRM
 if [[ ! "$CONFIRM" =~ ^[yY]$ ]]; then
@@ -18,34 +19,31 @@ if [[ ! "$CONFIRM" =~ ^[yY]$ ]]; then
 fi
 
 echo ""
-echo "--- Uninstalling k3s ---"
-if [[ -f /usr/local/bin/k3s-uninstall.sh ]]; then
-  /usr/local/bin/k3s-uninstall.sh
-else
-  echo "k3s not installed, skipping uninstall"
-fi
+echo "--- Running kubeadm reset ---"
+sudo kubeadm reset -f
 
 echo ""
-echo "--- Installing k3s ---"
-curl -sfL https://get.k3s.io | sh -
+echo "--- Cleaning up CNI ---"
+sudo rm -rf /etc/cni/net.d
+sudo rm -rf /var/lib/cni/
 
 echo ""
-echo "--- Waiting for k3s to be ready ---"
-sleep 5
-until kubectl get nodes &>/dev/null; do
-  echo "  Waiting for k3s..."
-  sleep 2
-done
+echo "--- Cleaning up iptables ---"
+sudo iptables -F
+sudo iptables -t nat -F
+sudo iptables -t mangle -F
+sudo iptables -X
 
 echo ""
-echo "--- Configuring kubeconfig ---"
-mkdir -p ~/.kube
-sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
-sudo chown $(id -u):$(id -g) ~/.kube/config
+echo "--- Removing kubeconfig ---"
+rm -f $HOME/.kube/config
 
 echo ""
-echo "=== k3s Reset Complete ==="
+echo "=== kubeadm Reset Complete ==="
 echo ""
-kubectl get nodes
+echo "To reinitialize:"
+echo "  sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=<NODE_IP>"
 echo ""
-echo "Next: make install-all"
+echo "Then install CNI (Calico):"
+echo "  kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.29.3/manifests/tigera-operator.yaml"
+echo "  kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.29.3/manifests/custom-resources.yaml"
