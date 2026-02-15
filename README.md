@@ -103,7 +103,8 @@ make run-ddns          # DDNS 업데이트
 make ddns-update       # DDNS 수동 업데이트
 make ddns-test         # Route53 API 테스트
 make rbac-create-users # 팀원 kubeconfig 생성
-make clean-all         # 전체 초기화 (k3s 유지)
+make clean-ns          # namespace별 정리 (k3s 유지, 멀티노드용)
+make clean-cluster     # k3s 완전 초기화 (싱글노드용)
 ```
 
 ## 디렉토리 구조
@@ -122,7 +123,8 @@ make clean-all         # 전체 초기화 (k3s 유지)
 │   │   ├── uninstall.sh
 │   │   └── fix-port-conflict.sh
 │   ├── k3s/
-│   │   ├── clean-all.sh        # 전체 초기화
+│   │   ├── clean-ns.sh         # namespace별 정리 (멀티노드용)
+│   │   ├── clean-cluster.sh    # k3s 완전 초기화 (싱글노드용)
 │   │   └── disable-traefik.sh
 │   ├── rbac/
 │   │   ├── create-all-users.sh
