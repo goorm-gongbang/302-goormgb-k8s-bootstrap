@@ -42,7 +42,16 @@ for ns in $NAMESPACES kube-system; do
 done
 
 echo ""
-echo "=== Step 3: Uninstall Istio ==="
+echo "=== Step 3: Delete Istio CRDs and uninstall ==="
+# Istio CRD 리소스 먼저 삭제
+kubectl delete virtualservice --all -A --wait=false 2>/dev/null || true
+kubectl delete gateway --all -A --wait=false 2>/dev/null || true
+kubectl delete destinationrule --all -A --wait=false 2>/dev/null || true
+kubectl delete serviceentry --all -A --wait=false 2>/dev/null || true
+kubectl delete envoyfilter --all -A --wait=false 2>/dev/null || true
+kubectl delete peerauthentication --all -A --wait=false 2>/dev/null || true
+kubectl delete authorizationpolicy --all -A --wait=false 2>/dev/null || true
+
 if command -v istioctl &>/dev/null; then
   istioctl uninstall --purge -y 2>/dev/null || true
 fi
@@ -54,6 +63,7 @@ for ns in $NAMESPACES; do
     echo "  Cleaning $ns..."
 
     # 컨트롤러 삭제 (순서 중요)
+    kubectl delete hpa --all -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
     kubectl delete statefulset --all -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
     kubectl delete daemonset --all -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
     kubectl delete deployment --all -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
