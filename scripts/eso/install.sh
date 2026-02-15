@@ -15,11 +15,14 @@ helm repo update
 # namespace 생성
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
-# ESO 설치
+# ESO 설치 (control-plane 노드에 배치)
 helm upgrade --install external-secrets \
   external-secrets/external-secrets \
   -n "$NAMESPACE" \
   --set installCRDs=true \
+  --set nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
+  --set webhook.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
+  --set certController.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
   --wait
 
 # CRD 등록 대기
