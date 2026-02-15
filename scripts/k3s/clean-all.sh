@@ -108,14 +108,31 @@ echo ""
 echo "--- Force deleting remaining resources in namespaces ---"
 for ns in $NAMESPACES; do
   if kubectl get ns "$ns" &>/dev/null; then
-    # StatefulSet 먼저 삭제 (PVC 의존성)
-    kubectl delete statefulset --all -n "$ns" --force --grace-period=0 2>/dev/null || true
-    kubectl delete daemonset --all -n "$ns" --force --grace-period=0 2>/dev/null || true
-    kubectl delete deployment --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+    echo "  Cleaning $ns..."
+
+    # 컨트롤러 삭제
+    kubectl delete statefulset --all -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
+    kubectl delete daemonset --all -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
+    kubectl delete deployment --all -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
+    kubectl delete replicaset --all -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
+    kubectl delete job --all -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
+    kubectl delete cronjob --all -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
+
+    # Pod finalizer 제거 + 강제 삭제
+    for pod in $(kubectl get pods -n "$ns" -o name 2>/dev/null); do
+      kubectl patch "$pod" -n "$ns" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+    done
     kubectl delete pods --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+
+    # PVC/기타 리소스
     kubectl delete pvc --all -n "$ns" --force --grace-period=0 2>/dev/null || true
     kubectl delete svc --all -n "$ns" 2>/dev/null || true
     kubectl delete externalsecrets.external-secrets.io --all -n "$ns" 2>/dev/null || true
+    kubectl delete secrets --all -n "$ns" 2>/dev/null || true
+    kubectl delete configmaps --all -n "$ns" 2>/dev/null || true
+
+    # 잠시 대기
+    sleep 2
   fi
 done
 
