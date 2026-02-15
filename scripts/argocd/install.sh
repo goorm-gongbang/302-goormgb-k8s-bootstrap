@@ -8,6 +8,9 @@ NAMESPACE="argocd"
 
 echo "=== ArgoCD Install ==="
 
+# namespace 먼저 생성 (--create-namespace 버그 대응)
+kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
 # helm repo 추가
 helm repo add argo https://argoproj.github.io/argo-helm 2>/dev/null || true
 helm repo update
