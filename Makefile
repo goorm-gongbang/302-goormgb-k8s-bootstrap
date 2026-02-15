@@ -2,7 +2,7 @@
 # k3s 클러스터 초기 설정을 위한 명령어 모음
 
 .PHONY: help install-all install-eso install-cert-manager install-istio install-argocd \
-        deploy-root-app setup-github-ssh wait-sync run-ddns clean-all disable-traefik fix-port-conflict \
+        deploy-root-app setup-github-ssh wait-sync run-ddns clean-cluster disable-traefik fix-port-conflict \
         rbac-create-users ddns-test ddns-update
 
 # 기본 타겟
@@ -29,7 +29,7 @@ help:
 	@echo "  make ddns-update       - DDNS 수동 업데이트"
 	@echo ""
 	@echo "정리:"
-	@echo "  make clean-all         - 전체 초기화 (k3s 유지, 내부만 삭제)"
+	@echo "  make clean-cluster     - k3s 클러스터 완전 초기화 (삭제 후 재설치)"
 
 # === 전체 설치 ===
 install-all: install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app wait-sync run-ddns
@@ -101,5 +101,5 @@ ddns-update:
 	./scripts/ddns/update-now.sh
 
 # === 정리 ===
-clean-all:
-	./scripts/k3s/clean-all.sh
+clean-cluster:
+	./scripts/k3s/clean-cluster.sh
