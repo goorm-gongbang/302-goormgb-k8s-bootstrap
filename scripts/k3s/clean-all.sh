@@ -15,6 +15,19 @@ force_delete_ns() {
   kubectl get ns "$ns" -o json | \
     sed 's/"kubernetes"//g' | \
     kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f - 2>/dev/null || true
+
+  # 실제 삭제될 때까지 대기
+  echo "  ⏳ Waiting for $ns to be fully deleted..."
+  local wait_count=0
+  while kubectl get ns "$ns" &>/dev/null; do
+    sleep 1
+    ((wait_count++))
+    if [[ $wait_count -ge 60 ]]; then
+      echo "  ❌ $ns deletion timeout (60s)"
+      return 1
+    fi
+  done
+  echo "  ✅ $ns deleted"
 }
 
 echo "=== k3s Clean All ==="
@@ -93,6 +106,23 @@ for ns in $NAMESPACES; do
   fi
 done
 
+echo ""
+echo "--- Verifying all namespaces deleted ---"
+FAILED=0
+for ns in $NAMESPACES; do
+  if kubectl get ns "$ns" &>/dev/null; then
+    echo "  ❌ $ns still exists!"
+    FAILED=1
+  fi
+done
+
+if [[ $FAILED -eq 1 ]]; then
+  echo ""
+  echo "❌ Some namespaces not fully deleted. Run clean-all again or delete manually."
+  exit 1
+fi
+
+echo "  ✅ All namespaces cleaned"
 echo ""
 echo "=== Clean complete ==="
 echo ""
