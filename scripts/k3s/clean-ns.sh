@@ -111,7 +111,30 @@ for ns in $NAMESPACES; do
 done
 
 echo ""
-echo "=== Step 7: Final verification ==="
+echo "=== Step 7: Delete CRDs ==="
+# External Secrets CRDs
+for crd in $(kubectl get crd -o name 2>/dev/null | grep external-secrets); do
+  echo "  Deleting $crd..."
+  kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete "$crd" --wait=false 2>/dev/null || true
+done
+
+# Istio CRDs
+for crd in $(kubectl get crd -o name 2>/dev/null | grep istio); do
+  echo "  Deleting $crd..."
+  kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete "$crd" --wait=false 2>/dev/null || true
+done
+
+# cert-manager CRDs
+for crd in $(kubectl get crd -o name 2>/dev/null | grep cert-manager); do
+  echo "  Deleting $crd..."
+  kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete "$crd" --wait=false 2>/dev/null || true
+done
+
+echo ""
+echo "=== Step 8: Final verification ==="
 sleep 3
 FAILED=0
 for ns in $NAMESPACES; do
