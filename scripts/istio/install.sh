@@ -4,10 +4,9 @@ set -euo pipefail
 # Istio 설치 (istioctl 사용)
 # Usage: ./scripts/istio/install.sh
 #
-# k3s에서 Istio 설치 시 주의사항:
-# - Traefik과 Istio IngressGateway가 공존함
-# - dev ns: Traefik 사용 (sidecar injection 비활성화)
-# - staging ns: Istio Gateway 사용 (sidecar injection 활성화)
+# kubeadm 클러스터용:
+# - externalIPs로 외부 접근 설정 (LoadBalancer 없음)
+# - 기본 EXTERNAL_IP=192.168.45.154 (mini-might, worker node)
 
 ISTIO_VERSION="${ISTIO_VERSION:-1.24.2}"
 
@@ -62,8 +61,15 @@ fi
 # pre-check
 istioctl x precheck
 
-# Istio 설치 (default profile)
-istioctl install --set profile=default -y
+# Istio 설치 (default profile + externalIPs for kubeadm)
+EXTERNAL_IP="${EXTERNAL_IP:-192.168.45.154}"  # mini-might (worker node)
+
+istioctl install --set profile=default \
+  --set values.gateways.istio-ingressgateway.serviceAnnotations."metallb\.universe\.tf/allow-shared-ip"=default \
+  --set "components.ingressGateways[0].k8s.service.externalIPs[0]=${EXTERNAL_IP}" \
+  -y
+
+echo "IngressGateway externalIP: ${EXTERNAL_IP}"
 
 # namespace label 설정
 kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f - 2>/dev/null || true
@@ -75,11 +81,8 @@ kubectl label namespace staging istio-injection=enabled --overwrite 2>/dev/null 
 # dev namespace는 sidecar injection 비활성화
 kubectl label namespace dev istio-injection=disabled --overwrite 2>/dev/null || true
 
-# k3s: 포트 충돌 확인 및 해결
-if kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}' 2>/dev/null | grep -q "k3s"; then
-  echo ""
-  fix_port_conflict
-fi
+# 포트 충돌 확인 (선택사항)
+# fix_port_conflict
 
 echo ""
 echo "=== Istio Install Complete ==="
