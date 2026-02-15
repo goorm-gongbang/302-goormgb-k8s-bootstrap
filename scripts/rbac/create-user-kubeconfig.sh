@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # 팀원용 kubeconfig 생성 스크립트
-# k3s server 노드에서 실행 (sudo 필요)
+# kubeadm control plane 노드에서 실행 (sudo 필요)
 #
 # Usage: ./create-user-kubeconfig.sh <username>
 # Example: ./create-user-kubeconfig.sh grgb-wonny
@@ -17,19 +17,16 @@ if [[ -z "$USERNAME" ]]; then
   exit 1
 fi
 
-# k3s CA 위치
-# server-ca: API 서버 인증서 검증용 (kubeconfig의 certificate-authority-data)
-# client-ca: 클라이언트 인증서 서명용
-K3S_SERVER_CA="/var/lib/rancher/k3s/server/tls/server-ca.crt"
-K3S_CLIENT_CA_KEY="/var/lib/rancher/k3s/server/tls/client-ca.key"
-K3S_CLIENT_CA_CERT="/var/lib/rancher/k3s/server/tls/client-ca.crt"
+# kubeadm CA 위치
+CA_CERT="/etc/kubernetes/pki/ca.crt"
+CA_KEY="/etc/kubernetes/pki/ca.key"
 
 # CP 노드 실제 IP 가져오기 (VPN 접속용)
 # 127.0.0.1이 아닌 실제 내부 IP 사용
 CP_IP=$(hostname -I | awk '{print $1}')
-K3S_SERVER_URL="https://${CP_IP}:6443"
+SERVER_URL="https://${CP_IP}:6443"
 
-echo "Using server: $K3S_SERVER_URL"
+echo "Using server: $SERVER_URL"
 
 WORK_DIR=$(mktemp -d)
 trap "rm -rf $WORK_DIR" EXIT
@@ -39,17 +36,17 @@ echo "=== Creating kubeconfig for: $USERNAME ==="
 # 1. 개인 키 생성
 openssl genrsa -out "$WORK_DIR/${USERNAME}.key" 2048
 
-# 2. CSR 생성 (CN = username)
+# 2. CSR 생성 (CN = username, O = team-viewer 그룹)
 openssl req -new \
   -key "$WORK_DIR/${USERNAME}.key" \
   -out "$WORK_DIR/${USERNAME}.csr" \
   -subj "/CN=${USERNAME}/O=team-viewer"
 
-# 3. client-ca로 서명 (30일 유효)
+# 3. CA로 서명 (30일 유효)
 sudo openssl x509 -req \
   -in "$WORK_DIR/${USERNAME}.csr" \
-  -CA "$K3S_CLIENT_CA_CERT" \
-  -CAkey "$K3S_CLIENT_CA_KEY" \
+  -CA "$CA_CERT" \
+  -CAkey "$CA_KEY" \
   -CAcreateserial \
   -out "$WORK_DIR/${USERNAME}.crt" \
   -days 30
@@ -60,15 +57,15 @@ apiVersion: v1
 kind: Config
 clusters:
 - cluster:
-    certificate-authority-data: $(sudo cat "$K3S_SERVER_CA" | base64 | tr -d '\n')
-    server: ${K3S_SERVER_URL}
-  name: k3s
+    certificate-authority-data: $(sudo cat "$CA_CERT" | base64 | tr -d '\n')
+    server: ${SERVER_URL}
+  name: kubeadm
 contexts:
 - context:
-    cluster: k3s
+    cluster: kubeadm
     user: ${USERNAME}
-  name: ${USERNAME}@k3s
-current-context: ${USERNAME}@k3s
+  name: ${USERNAME}@kubeadm
+current-context: ${USERNAME}@kubeadm
 users:
 - name: ${USERNAME}
   user:
@@ -85,3 +82,6 @@ echo "  2. 팀원 PC에서: export KUBECONFIG=~/${USERNAME}.kubeconfig"
 echo "  3. 또는: cp ${USERNAME}.kubeconfig ~/.kube/config"
 echo ""
 echo "유효기간: 30일 (갱신 필요)"
+echo ""
+echo "⚠️  RBAC 설정 필요 (최초 1회):"
+echo "  kubectl apply -f scripts/rbac/team-viewer-rbac.yaml"
