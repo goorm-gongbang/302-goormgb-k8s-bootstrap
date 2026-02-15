@@ -1,18 +1,19 @@
 # 302-goormgb-k8s-bootstrap Makefile
-# k3s 클러스터 초기 설정을 위한 명령어 모음
+# kubeadm 클러스터 초기 설정을 위한 명령어 모음
 
-.PHONY: help install-all install-eso install-cert-manager install-istio install-argocd \
-        deploy-root-app setup-github-ssh wait-sync run-ddns clean-ns clean-cluster disable-traefik fix-port-conflict \
+.PHONY: help install-all install-calico install-eso install-cert-manager install-istio install-argocd \
+        deploy-root-app setup-github-ssh wait-sync run-ddns clean-ns clean-cluster fix-port-conflict \
         rbac-create-users ddns-test ddns-update
 
 # 기본 타겟
 help:
-	@echo "=== k3s Bootstrap Commands ==="
+	@echo "=== kubeadm Bootstrap Commands ==="
 	@echo ""
 	@echo "초기 설치 (순서대로):"
-	@echo "  make install-all       - 전체 설치 (ESO → cert-manager → Istio → ArgoCD → Root App)"
+	@echo "  make install-all       - 전체 설치 (Calico → ESO → cert-manager → Istio → ArgoCD → Root App)"
 	@echo ""
 	@echo "개별 설치:"
+	@echo "  make install-calico    - Calico CNI 설치 (kubeadm 필수)"
 	@echo "  make install-eso       - External Secrets Operator 설치"
 	@echo "  make bootstrap-aws     - AWS credentials 등록 (수동 입력)"
 	@echo "  make install-cert-manager - cert-manager 설치"
@@ -22,18 +23,17 @@ help:
 	@echo "  make deploy-root-app   - ArgoCD Root Application 배포"
 	@echo ""
 	@echo "유틸리티:"
-	@echo "  make disable-traefik   - k3s Traefik 비활성화 (Istio 전용 사용 시)"
 	@echo "  make fix-port-conflict - 80/443 포트 충돌 해결"
 	@echo "  make rbac-create-users - 팀원 kubeconfig 생성"
 	@echo "  make ddns-test         - Route53 API 테스트"
 	@echo "  make ddns-update       - DDNS 수동 업데이트"
 	@echo ""
 	@echo "정리:"
-	@echo "  make clean-ns          - namespace별 정리 (k3s 유지, 멀티노드용)"
-	@echo "  make clean-cluster     - k3s 완전 초기화 (싱글노드용)"
+	@echo "  make clean-ns          - namespace별 정리 (kubeadm 유지, 멀티노드용)"
+	@echo "  make clean-cluster     - kubeadm 완전 초기화 (kubeadm reset)"
 
 # === 전체 설치 ===
-install-all: install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app wait-sync run-ddns
+install-all: install-calico install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app wait-sync run-ddns
 	@echo ""
 	@echo "=== All components installed ==="
 	@echo ""
@@ -52,6 +52,10 @@ run-ddns:
 	@./scripts/ddns/update-now.sh || echo "DDNS update skipped (CronJob may not be ready yet). Run 'make ddns-update' later."
 
 # === 개별 설치 ===
+install-calico:
+	@echo "=== Installing Calico CNI ==="
+	./scripts/calico/install.sh
+
 install-eso:
 	@echo "=== Installing ESO ==="
 	./scripts/eso/install.sh
@@ -86,9 +90,6 @@ deploy-root-app:
 	@echo "Root Application deployed. ArgoCD will sync all apps from helm repo."
 
 # === 유틸리티 ===
-disable-traefik:
-	./scripts/k3s/disable-traefik.sh
-
 fix-port-conflict:
 	./scripts/istio/fix-port-conflict.sh
 
@@ -103,7 +104,7 @@ ddns-update:
 
 # === 정리 ===
 clean-ns:
-	./scripts/k3s/clean-ns.sh
+	./scripts/clean-ns.sh
 
 clean-cluster:
-	./scripts/k3s/clean-cluster.sh
+	./scripts/clean-cluster.sh

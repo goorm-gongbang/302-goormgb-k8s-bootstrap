@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# k3s 클러스터 내 모든 앱/인프라 정리 (k3s 자체는 유지)
-# Usage: ./scripts/k3s/clean-ns.sh
+# kubeadm 클러스터 내 모든 앱/인프라 정리 (클러스터 자체는 유지)
+# Usage: ./scripts/clean-ns.sh
 
-NAMESPACES="dev-app dev data argocd cert-manager external-secrets istio-system monitoring staging"
+NAMESPACES="dev-app dev data argocd cert-manager external-secrets istio-system istio-ingress monitoring staging calico-system calico-apiserver tigera-operator"
 
-echo "=== k3s Clean Namespaces ==="
+echo "=== Clean Namespaces ==="
 echo ""
 echo "This will REMOVE:"
 echo "  - All ArgoCD Applications"
 echo "  - All Helm releases"
 echo "  - All app namespaces"
-echo "  - Istio"
+echo "  - Istio, Calico"
 echo ""
-echo "k3s cluster itself will be preserved."
+echo "kubeadm cluster itself will be preserved."
 echo ""
 read -rp "Are you sure? [y/N]: " CONFIRM
 if [[ ! "$CONFIRM" =~ ^[yY]$ ]]; then
@@ -128,6 +128,13 @@ done
 
 # cert-manager CRDs
 for crd in $(kubectl get crd -o name 2>/dev/null | grep cert-manager); do
+  echo "  Deleting $crd..."
+  kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete "$crd" --wait=false 2>/dev/null || true
+done
+
+# Calico/Tigera CRDs
+for crd in $(kubectl get crd -o name 2>/dev/null | grep -E "tigera|calico|projectcalico"); do
   echo "  Deleting $crd..."
   kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
   kubectl delete "$crd" --wait=false 2>/dev/null || true
