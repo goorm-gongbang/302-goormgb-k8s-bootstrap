@@ -108,8 +108,13 @@ echo ""
 echo "--- Force deleting remaining resources in namespaces ---"
 for ns in $NAMESPACES; do
   if kubectl get ns "$ns" &>/dev/null; then
-    kubectl delete all --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+    # StatefulSet 먼저 삭제 (PVC 의존성)
+    kubectl delete statefulset --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+    kubectl delete daemonset --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+    kubectl delete deployment --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+    kubectl delete pods --all -n "$ns" --force --grace-period=0 2>/dev/null || true
     kubectl delete pvc --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+    kubectl delete svc --all -n "$ns" 2>/dev/null || true
     kubectl delete externalsecrets.external-secrets.io --all -n "$ns" 2>/dev/null || true
   fi
 done
