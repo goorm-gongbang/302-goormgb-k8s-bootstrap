@@ -107,11 +107,13 @@ done
 echo ""
 echo "=== Step 6: Force kill stuck pods ==="
 for ns in $NAMESPACES; do
-  for pod in $(kubectl get pods -n "$ns" --field-selector=status.phase=Terminating -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+  # Terminating 상태는 deletionTimestamp가 설정된 pod
+  for pod in $(kubectl get pods -n "$ns" -o jsonpath='{.items[?(@.metadata.deletionTimestamp)].metadata.name}' 2>/dev/null); do
     echo "  Force deleting stuck pod: $ns/$pod"
-    kubectl patch pod "$pod" -n "$ns" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
     kubectl delete pod "$pod" -n "$ns" --force --grace-period=0 2>/dev/null || true
   done
+  # 남은 모든 pod도 강제 삭제
+  kubectl delete pods --all -n "$ns" --force --grace-period=0 2>/dev/null || true
 done
 
 echo ""
