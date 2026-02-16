@@ -55,24 +55,43 @@ fi
 
 echo ""
 echo "=== Step 5: Delete Calico resources ==="
-# Installation/APIServer CR 삭제 (finalizer 제거)
-kubectl patch installation default -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
-kubectl delete installation default --force --grace-period=0 2>/dev/null || true
-kubectl patch apiserver default -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
-kubectl delete apiserver default --force --grace-period=0 2>/dev/null || true
+
+# Tigera Operator 먼저 중지 (리소스 재생성 방지)
+kubectl scale deployment -n tigera-operator --all --replicas=0 2>/dev/null || true
+
+# Calico namespace 내 리소스 먼저 삭제
+for ns in calico-system calico-apiserver; do
+  kubectl delete deploy,ds,sts,rs,job --all -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
+  kubectl delete pods --all -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
+done
 
 # IPPool 삭제
 for pool in $(kubectl get ippool -o name 2>/dev/null || true); do
-  kubectl patch "$pool" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
-  kubectl delete "$pool" --force --grace-period=0 2>/dev/null || true
+  kubectl patch "$pool" -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+  kubectl delete "$pool" --force --grace-period=0 --wait=false 2>/dev/null || true
 done
 
-# Calico namespace 내 모든 리소스 삭제
-for ns in calico-system calico-apiserver tigera-operator; do
-  kubectl delete deploy,ds,sts,rs,job --all -n "$ns" --force --grace-period=0 2>/dev/null || true
-  kubectl delete pods --all -n "$ns" --force --grace-period=0 2>/dev/null || true
-  kubectl delete svc,cm,secret,sa --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+# Installation/APIServer CR 삭제 (finalizer를 빈 배열로)
+kubectl patch installation default -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+kubectl delete installation default --force --grace-period=0 --wait=false 2>/dev/null || true
+kubectl patch apiserver default -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+kubectl delete apiserver default --force --grace-period=0 --wait=false 2>/dev/null || true
+
+# 삭제 완료 대기 (최대 20초)
+echo "  Waiting for Calico CRs to be deleted..."
+for i in {1..10}; do
+  if ! kubectl get installation default &>/dev/null && ! kubectl get apiserver default &>/dev/null; then
+    echo "  Calico CRs deleted"
+    break
+  fi
+  kubectl patch installation default -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+  kubectl patch apiserver default -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+  sleep 2
 done
+
+# tigera-operator namespace 정리
+kubectl delete deploy,ds,sts,rs,job --all -n tigera-operator --force --grace-period=0 --wait=false 2>/dev/null || true
+kubectl delete pods --all -n tigera-operator --force --grace-period=0 --wait=false 2>/dev/null || true
 
 echo ""
 echo "=== Step 6: Delete namespaces and force finalize ==="
