@@ -105,8 +105,18 @@ for ns in $NAMESPACES; do
 done
 
 echo ""
-echo "=== Step 6: Wait and force finalize stuck namespaces ==="
-sleep 5
+echo "=== Step 6: Force kill stuck pods ==="
+for ns in $NAMESPACES; do
+  for pod in $(kubectl get pods -n "$ns" --field-selector=status.phase=Terminating -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+    echo "  Force deleting stuck pod: $ns/$pod"
+    kubectl patch pod "$pod" -n "$ns" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+    kubectl delete pod "$pod" -n "$ns" --force --grace-period=0 2>/dev/null || true
+  done
+done
+
+echo ""
+echo "=== Step 7: Force finalize stuck namespaces ==="
+sleep 3
 for ns in $NAMESPACES; do
   if kubectl get ns "$ns" &>/dev/null; then
     status=$(kubectl get ns "$ns" -o jsonpath='{.status.phase}' 2>/dev/null || echo "Unknown")
@@ -120,7 +130,7 @@ for ns in $NAMESPACES; do
 done
 
 echo ""
-echo "=== Step 7: Delete CRDs ==="
+echo "=== Step 8: Delete CRDs ==="
 # External Secrets CRDs
 for crd in $(kubectl get crd -o name 2>/dev/null | grep external-secrets); do
   echo "  Deleting $crd..."
@@ -157,7 +167,7 @@ for crd in $(kubectl get crd -o name 2>/dev/null | grep argoproj); do
 done
 
 echo ""
-echo "=== Step 8: Final verification ==="
+echo "=== Step 9: Final verification ==="
 sleep 3
 FAILED=0
 for ns in $NAMESPACES; do
