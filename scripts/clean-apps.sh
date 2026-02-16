@@ -40,30 +40,38 @@ else
 fi
 
 echo ""
-echo "=== Step 1: Delete ArgoCD apps (finalizer 제거 후 삭제) ==="
-# Finalizer 먼저 제거 (Terminating 상태 방지)
+echo "=== Step 1: Delete ArgoCD apps (cert-manager 제외, finalizer 제거 후 삭제) ==="
+# cert-manager 관련 앱은 보존
+PRESERVE_APPS="cert-manager cert-manager-config"
+
+# Finalizer 제거 및 삭제 (보존 앱 제외)
 for app in $(kubectl get applications.argoproj.io -n argocd -o name 2>/dev/null || true); do
+  appname=$(echo "$app" | sed 's|application.argoproj.io/||')
+  if echo "$PRESERVE_APPS" | grep -qw "$appname"; then
+    echo "  Preserving $appname"
+    continue
+  fi
   kubectl patch "$app" -n argocd -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete "$app" -n argocd --force --grace-period=0 --wait=false 2>/dev/null || true
 done
+
+# ApplicationSet 삭제
 for appset in $(kubectl get applicationsets.argoproj.io -n argocd -o name 2>/dev/null || true); do
   kubectl patch "$appset" -n argocd -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete "$appset" -n argocd --force --grace-period=0 --wait=false 2>/dev/null || true
 done
 
-# 삭제
-kubectl delete applicationsets.argoproj.io --all -n argocd --force --grace-period=0 --wait=false 2>/dev/null || true
-kubectl delete applications.argoproj.io --all -n argocd --force --grace-period=0 --wait=false 2>/dev/null || true
-
-# 완전히 삭제될 때까지 대기 (최대 30초)
+# 삭제 대기 (cert-manager 제외하고 카운트)
 echo "  Waiting for apps to be deleted..."
 for i in {1..15}; do
-  remaining=$(kubectl get applications.argoproj.io -n argocd --no-headers 2>/dev/null | wc -l || echo "0")
+  remaining=$(kubectl get applications.argoproj.io -n argocd --no-headers 2>/dev/null | grep -cvE "cert-manager" || echo "0")
   if [[ "$remaining" -eq 0 ]]; then
-    echo "  All ArgoCD apps deleted"
+    echo "  All target ArgoCD apps deleted"
     break
   fi
   echo "  Remaining: $remaining apps ($i/15)"
-  # 남은 앱 finalizer 재시도
-  for app in $(kubectl get applications.argoproj.io -n argocd -o name 2>/dev/null || true); do
+  # 남은 앱 finalizer 재시도 (보존 앱 제외)
+  for app in $(kubectl get applications.argoproj.io -n argocd -o name 2>/dev/null | grep -vE "cert-manager" || true); do
     kubectl patch "$app" -n argocd -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
     kubectl delete "$app" -n argocd --force --grace-period=0 --wait=false 2>/dev/null || true
   done
@@ -71,8 +79,15 @@ for i in {1..15}; do
 done
 
 echo ""
-echo "=== Step 2: Uninstall all Helm releases ==="
-helm list -A -q 2>/dev/null | xargs -L1 -I{} sh -c 'ns=$(helm list -A --filter "^{}$" -o json 2>/dev/null | jq -r ".[0].namespace // empty"); [ -n "$ns" ] && helm uninstall "{}" -n "$ns" --no-hooks --wait=false 2>/dev/null || true' || true
+echo "=== Step 2: Uninstall Helm releases (cert-manager, ArgoCD 제외) ==="
+# cert-manager, argocd namespace의 helm release는 유지
+for release in $(helm list -A -q 2>/dev/null || true); do
+  ns=$(helm list -A --filter "^${release}$" -o json 2>/dev/null | jq -r ".[0].namespace // empty")
+  if [[ -n "$ns" && "$ns" != "cert-manager" && "$ns" != "argocd" ]]; then
+    echo "  Uninstalling $release from $ns"
+    helm uninstall "$release" -n "$ns" --no-hooks --wait=false 2>/dev/null || true
+  fi
+done
 
 echo ""
 echo "=== Step 3: Stop controllers (ArgoCD, cert-manager 유지) ==="
