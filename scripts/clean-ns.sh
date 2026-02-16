@@ -69,8 +69,23 @@ done
 
 echo ""
 echo "=== Step 6: Delete CRDs ==="
-kubectl get crd -o name 2>/dev/null | grep -E "istio|cert-manager|argoproj|tigera|calico|projectcalico|external-secrets" | \
-  xargs -r kubectl delete --timeout=10s 2>/dev/null || true
+# CRD finalizer 제거 후 삭제
+for crd in $(kubectl get crd -o name 2>/dev/null | grep -E "istio|cert-manager|argoproj|tigera|calico|projectcalico|external-secrets"); do
+  kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete "$crd" --wait=false 2>/dev/null || true
+done
+
+# CRD가 완전히 삭제될 때까지 대기 (최대 30초)
+echo "  Waiting for CRDs to be deleted..."
+for i in {1..15}; do
+  remaining=$(kubectl get crd -o name 2>/dev/null | grep -E "istio|cert-manager|argoproj|tigera|calico|projectcalico|external-secrets" | wc -l)
+  if [[ "$remaining" -eq 0 ]]; then
+    echo "  All CRDs deleted"
+    break
+  fi
+  echo "  Waiting... ($remaining CRDs remaining)"
+  sleep 2
+done
 
 echo ""
 echo "=== Step 7: Final verification ==="
