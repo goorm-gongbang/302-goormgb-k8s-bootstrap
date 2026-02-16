@@ -52,8 +52,17 @@ kubectl delete envoyfilter --all -A --wait=false 2>/dev/null || true
 kubectl delete peerauthentication --all -A --wait=false 2>/dev/null || true
 kubectl delete authorizationpolicy --all -A --wait=false 2>/dev/null || true
 
+# istioctl 찾기 (PATH 또는 로컬 디렉토리)
+ISTIOCTL=""
 if command -v istioctl &>/dev/null; then
-  istioctl uninstall --purge -y 2>/dev/null || true
+  ISTIOCTL="istioctl"
+elif [[ -x "./istio-1.24.2/bin/istioctl" ]]; then
+  ISTIOCTL="./istio-1.24.2/bin/istioctl"
+fi
+
+if [[ -n "$ISTIOCTL" ]]; then
+  echo "  Using $ISTIOCTL"
+  $ISTIOCTL uninstall --purge -y 2>/dev/null || true
 fi
 
 echo ""
@@ -135,6 +144,13 @@ done
 
 # Calico/Tigera CRDs
 for crd in $(kubectl get crd -o name 2>/dev/null | grep -E "tigera|calico|projectcalico"); do
+  echo "  Deleting $crd..."
+  kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete "$crd" --wait=false 2>/dev/null || true
+done
+
+# ArgoCD CRDs
+for crd in $(kubectl get crd -o name 2>/dev/null | grep argoproj); do
   echo "  Deleting $crd..."
   kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
   kubectl delete "$crd" --wait=false 2>/dev/null || true
