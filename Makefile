@@ -2,7 +2,7 @@
 # kubeadm 클러스터 초기 설정을 위한 명령어 모음
 
 .PHONY: help install-all install-calico install-storage install-eso install-cert-manager install-istio install-argocd \
-        deploy-root-app setup-github-ssh wait-sync run-ddns clean-ns clean-cluster fix-port-conflict \
+        deploy-root-app setup-github-ssh wait-sync run-ddns run-ecr-creds clean-ns clean-cluster fix-port-conflict \
         rbac-create-users ddns-test ddns-update
 
 # 기본 타겟
@@ -34,7 +34,7 @@ help:
 	@echo "  make clean-cluster     - kubeadm 완전 초기화 (kubeadm reset)"
 
 # === 전체 설치 ===
-install-all: install-calico install-storage install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app wait-sync run-ddns
+install-all: install-calico install-storage install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app wait-sync run-ecr-creds run-ddns
 	@echo ""
 	@echo "=== All components installed ==="
 	@echo ""
@@ -47,6 +47,14 @@ wait-sync:
 	@sleep 10
 	@kubectl wait --for=condition=Healthy application/root -n argocd --timeout=60s 2>/dev/null || true
 	@kubectl wait --for=condition=Healthy application/ddns-route53 -n argocd --timeout=60s 2>/dev/null || echo "DDNS app not synced yet, continuing..."
+
+run-ecr-creds:
+	@echo "=== Running ECR Creds Refresh ==="
+	@kubectl wait --for=condition=Healthy application/ecr-creds -n argocd --timeout=120s 2>/dev/null || true
+	@kubectl create job --from=cronjob/ecr-creds-refresh ecr-init-$$(date +%s) -n kube-system 2>/dev/null || true
+	@echo "Waiting for ECR creds job..."
+	@sleep 10
+	@kubectl get secret -n dev-app 2>/dev/null | grep -q ecr && echo "ECR secret created in dev-app" || echo "ECR secret not yet created. Run 'make run-ecr-creds' later."
 
 run-ddns:
 	@echo "=== Running DDNS Update ==="
