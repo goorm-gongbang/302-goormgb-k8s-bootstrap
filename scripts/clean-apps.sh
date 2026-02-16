@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# kubeadm 클러스터 내 모든 앱/인프라 정리 (클러스터 자체는 유지)
-# Usage: ./scripts/clean-ns.sh
+# 앱/인프라 정리 (ArgoCD, cert-manager 유지)
+# Usage: ./scripts/clean-apps.sh
 
-NAMESPACES="dev-app dev data argocd cert-manager external-secrets istio-system istio-ingress monitoring staging calico-system calico-apiserver tigera-operator local-path-storage"
+# ArgoCD, cert-manager는 유지 (UI 접근, TLS 발급 제한)
+NAMESPACES="dev-app dev data external-secrets istio-system istio-ingress monitoring staging calico-system calico-apiserver tigera-operator local-path-storage"
 
-echo "=== Clean Namespaces ==="
+echo "=== Clean Apps ==="
 echo ""
 echo "This will REMOVE:"
-echo "  - All ArgoCD Applications"
+echo "  - All ArgoCD Applications (ArgoCD itself preserved)"
 echo "  - All Helm releases"
-echo "  - All app namespaces"
-echo "  - Istio, Calico, CRDs"
+echo "  - App namespaces (cert-manager preserved)"
+echo "  - Istio, Calico, ESO, CRDs"
 echo ""
-echo "kubeadm cluster itself will be preserved."
+echo "ArgoCD, cert-manager will be preserved."
 echo ""
 read -rp "Are you sure? [y/N]: " CONFIRM
 if [[ ! "$CONFIRM" =~ ^[yY]$ ]]; then
@@ -33,10 +34,9 @@ echo "=== Step 2: Uninstall all Helm releases ==="
 helm list -A -q 2>/dev/null | xargs -L1 -I{} sh -c 'ns=$(helm list -A --filter "^{}$" -o json 2>/dev/null | jq -r ".[0].namespace // empty"); [ -n "$ns" ] && helm uninstall "{}" -n "$ns" --no-hooks --wait=false 2>/dev/null || true' || true
 
 echo ""
-echo "=== Step 3: Stop controllers ==="
-kubectl scale deployment -n argocd --all --replicas=0 2>/dev/null || true
+echo "=== Step 3: Stop controllers (ArgoCD, cert-manager 유지) ==="
+# ArgoCD, cert-manager는 유지하고 다른 컨트롤러만 중지
 kubectl scale deployment -n external-secrets --all --replicas=0 2>/dev/null || true
-kubectl scale deployment -n cert-manager --all --replicas=0 2>/dev/null || true
 kubectl scale deployment -n tigera-operator --all --replicas=0 2>/dev/null || true
 sleep 2
 

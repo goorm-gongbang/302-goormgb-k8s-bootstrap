@@ -2,7 +2,7 @@
 # kubeadm 클러스터 초기 설정을 위한 명령어 모음
 
 .PHONY: help install-all install-calico install-storage install-eso install-cert-manager install-istio install-argocd \
-        deploy-root-app setup-github-ssh wait-sync run-ddns run-ecr-creds clean-ns clean-cluster fix-port-conflict \
+        deploy-root-app setup-github-ssh wait-sync run-ddns run-ecr-creds clean-apps clean-cluster fix-port-conflict \
         rbac-create-users ddns-test ddns-update
 
 # 기본 타겟
@@ -30,7 +30,7 @@ help:
 	@echo "  make ddns-update       - DDNS 수동 업데이트"
 	@echo ""
 	@echo "정리:"
-	@echo "  make clean-ns          - namespace별 정리 (kubeadm 유지, 멀티노드용)"
+	@echo "  make clean-apps        - 앱 정리 (ArgoCD, cert-manager 유지)"
 	@echo "  make clean-cluster     - kubeadm 완전 초기화 (kubeadm reset)"
 
 # === 전체 설치 ===
@@ -116,8 +116,8 @@ ddns-update:
 	./scripts/ddns/update-now.sh
 
 # === 정리 ===
-clean-ns:
-	./scripts/clean-ns.sh
+clean-apps:
+	./scripts/clean-apps.sh
 
 clean-cluster:
 	./scripts/clean-cluster.sh
