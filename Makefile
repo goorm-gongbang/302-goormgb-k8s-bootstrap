@@ -43,9 +43,20 @@ install-all: install-calico install-storage install-eso bootstrap-aws install-ce
 	@echo "  Login: Google OAuth (등록된 이메일만 접근 가능)"
 
 wait-sync:
-	@echo "=== Waiting for ArgoCD to sync apps (60s) ==="
+	@echo "=== Waiting for ArgoCD to sync apps (120s) ==="
 	@sleep 10
-	@kubectl wait --for=condition=Healthy application/root -n argocd --timeout=60s 2>/dev/null || true
+	@echo "Waiting for root-dev app to sync..."
+	@kubectl wait --for=condition=Healthy application/root-dev -n argocd --timeout=120s 2>/dev/null || echo "root-dev not healthy yet, continuing..."
+	@echo "Waiting for argocd-config to be created..."
+	@for i in 1 2 3 4 5 6 7 8 9 10; do \
+		if kubectl get application argocd-config -n argocd &>/dev/null; then \
+			echo "argocd-config created!"; \
+			break; \
+		fi; \
+		echo "  Waiting... ($$i/10)"; \
+		sleep 5; \
+	done
+	@kubectl wait --for=condition=Healthy application/argocd-config -n argocd --timeout=60s 2>/dev/null || echo "argocd-config not healthy yet"
 	@kubectl wait --for=condition=Healthy application/ddns-route53 -n argocd --timeout=60s 2>/dev/null || echo "DDNS app not synced yet, continuing..."
 
 run-ecr-creds:
@@ -101,11 +112,11 @@ deploy-root-app:
 	kubectl apply -f argo-init/root-application.yaml
 	@echo "Waiting for root app to be created..."
 	@sleep 5
-	@echo "Triggering root app sync..."
-	@kubectl patch app root-dev -n argocd --type merge -p '{"operation":{"initiatedBy":{"username":"admin"},"sync":{}}}' 2>/dev/null || true
-	@echo "Waiting for apps to be created (60s)..."
-	@for i in 1 2 3 4 5 6; do \
-		echo "  Checking... ($$i/6)"; \
+	@echo "Triggering root app refresh..."
+	@kubectl annotate application root-dev -n argocd argocd.argoproj.io/refresh=normal --overwrite 2>/dev/null || true
+	@echo "Waiting for apps to be created (90s)..."
+	@for i in 1 2 3 4 5 6 7 8 9; do \
+		echo "  Checking... ($$i/9)"; \
 		kubectl get app -n argocd 2>/dev/null | head -15; \
 		sleep 10; \
 	done
