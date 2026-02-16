@@ -64,10 +64,29 @@ istioctl x precheck
 # Istio 설치 (default profile + externalIPs for kubeadm)
 EXTERNAL_IP="${EXTERNAL_IP:-192.168.45.154}"  # mini-might (worker node)
 
-istioctl install --set profile=default \
-  --set values.gateways.istio-ingressgateway.serviceAnnotations."metallb\.universe\.tf/allow-shared-ip"=default \
-  --set "components.ingressGateways[0].k8s.service.externalIPs[0]=${EXTERNAL_IP}" \
-  -y
+# IstioOperator 매니페스트로 설치 (CLI 플래그 버그 회피)
+cat <<EOF | istioctl install -y -f -
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  profile: default
+  components:
+    ingressGateways:
+      - name: istio-ingressgateway
+        enabled: true
+        k8s:
+          service:
+            externalIPs:
+              - ${EXTERNAL_IP}
+          hpaSpec:
+            minReplicas: 1
+            maxReplicas: 3
+  values:
+    gateways:
+      istio-ingressgateway:
+        serviceAnnotations:
+          metallb.universe.tf/allow-shared-ip: default
+EOF
 
 echo "IngressGateway externalIP: ${EXTERNAL_IP}"
 
