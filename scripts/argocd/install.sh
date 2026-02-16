@@ -57,6 +57,32 @@ done
 # Application CRD가 실제로 사용 가능한지 확인
 kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=60s 2>/dev/null || true
 
+# GitHub SSH Key ExternalSecret 적용 및 Secret 생성 대기
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+echo ""
+echo "=== Setting up GitHub SSH Key ==="
+kubectl apply -f "$REPO_ROOT/argo-init/external-secret-github.yaml"
+
+# Secret이 생성될 때까지 대기 (최대 60초)
+echo "Waiting for repo-goormgb-helm secret..."
+for i in {1..30}; do
+  if kubectl get secret repo-goormgb-helm -n argocd &>/dev/null; then
+    echo "  GitHub SSH secret ready"
+    break
+  fi
+  echo "  Waiting for secret... ($i/30)"
+  sleep 2
+done
+
+# Secret 생성 확인
+if ! kubectl get secret repo-goormgb-helm -n argocd &>/dev/null; then
+  echo "WARNING: repo-goormgb-helm secret not created."
+  echo "Check: kubectl get externalsecret -n argocd"
+  echo "Check: kubectl describe externalsecret repo-goormgb-helm -n argocd"
+fi
+
 echo ""
 echo "=== ArgoCD Installed ==="
 echo ""
