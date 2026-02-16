@@ -7,6 +7,9 @@ set -euo pipefail
 # ArgoCD, cert-manager는 유지 (UI 접근, TLS 발급 제한)
 NAMESPACES="dev-app dev data external-secrets istio-system istio-ingress monitoring staging calico-system calico-apiserver tigera-operator local-path-storage"
 
+# TLS Secret 백업 경로
+TLS_BACKUP="/tmp/goormgb-tls-backup.yaml"
+
 echo "=== Clean Apps ==="
 echo ""
 echo "This will REMOVE:"
@@ -15,7 +18,7 @@ echo "  - All Helm releases"
 echo "  - App namespaces (cert-manager preserved)"
 echo "  - Istio, Calico, ESO, CRDs"
 echo ""
-echo "ArgoCD, cert-manager will be preserved."
+echo "ArgoCD, cert-manager, TLS secrets will be preserved."
 echo ""
 read -rp "Are you sure? [y/N]: " CONFIRM
 if [[ ! "$CONFIRM" =~ ^[yY]$ ]]; then
@@ -24,10 +27,48 @@ if [[ ! "$CONFIRM" =~ ^[yY]$ ]]; then
 fi
 
 echo ""
-echo "=== Step 1: Delete ArgoCD apps (cascade) ==="
-# Cascade 삭제로 하위 리소스 연쇄 삭제
-kubectl delete applicationsets.argoproj.io --all -n argocd --cascade=foreground --timeout=30s 2>/dev/null || true
-kubectl delete applications.argoproj.io --all -n argocd --cascade=foreground --timeout=30s 2>/dev/null || true
+echo "=== Step 0: Backup TLS secrets ==="
+# istio-system의 TLS secret 백업 (Let's Encrypt 재발급 방지)
+if kubectl get secret goormgb-tls -n istio-system &>/dev/null; then
+  echo "  Backing up goormgb-tls secret..."
+  kubectl get secret goormgb-tls -n istio-system -o json | \
+    jq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.namespace, .metadata.managedFields, .metadata.ownerReferences)' \
+    > "$TLS_BACKUP"
+  echo "  Saved to $TLS_BACKUP"
+else
+  echo "  No TLS secret found, skipping backup"
+fi
+
+echo ""
+echo "=== Step 1: Delete ArgoCD apps (finalizer 제거 후 삭제) ==="
+# Finalizer 먼저 제거 (Terminating 상태 방지)
+for app in $(kubectl get applications.argoproj.io -n argocd -o name 2>/dev/null || true); do
+  kubectl patch "$app" -n argocd -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+done
+for appset in $(kubectl get applicationsets.argoproj.io -n argocd -o name 2>/dev/null || true); do
+  kubectl patch "$appset" -n argocd -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+done
+
+# 삭제
+kubectl delete applicationsets.argoproj.io --all -n argocd --force --grace-period=0 --wait=false 2>/dev/null || true
+kubectl delete applications.argoproj.io --all -n argocd --force --grace-period=0 --wait=false 2>/dev/null || true
+
+# 완전히 삭제될 때까지 대기 (최대 30초)
+echo "  Waiting for apps to be deleted..."
+for i in {1..15}; do
+  remaining=$(kubectl get applications.argoproj.io -n argocd --no-headers 2>/dev/null | wc -l || echo "0")
+  if [[ "$remaining" -eq 0 ]]; then
+    echo "  All ArgoCD apps deleted"
+    break
+  fi
+  echo "  Remaining: $remaining apps ($i/15)"
+  # 남은 앱 finalizer 재시도
+  for app in $(kubectl get applications.argoproj.io -n argocd -o name 2>/dev/null || true); do
+    kubectl patch "$app" -n argocd -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+    kubectl delete "$app" -n argocd --force --grace-period=0 --wait=false 2>/dev/null || true
+  done
+  sleep 2
+done
 
 echo ""
 echo "=== Step 2: Uninstall all Helm releases ==="
@@ -108,9 +149,9 @@ for ns in $NAMESPACES; do
 done
 
 echo ""
-echo "=== Step 7: Delete CRDs ==="
-# CRD finalizer 제거 후 삭제
-for crd in $(kubectl get crd -o name 2>/dev/null | grep -E "istio|cert-manager|argoproj|tigera|calico|projectcalico|external-secrets"); do
+echo "=== Step 7: Delete CRDs (cert-manager, ArgoCD 보존) ==="
+# CRD finalizer 제거 후 삭제 (cert-manager, argoproj 제외)
+for crd in $(kubectl get crd -o name 2>/dev/null | grep -E "istio|tigera|calico|projectcalico|external-secrets"); do
   kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
   kubectl delete "$crd" --wait=false 2>/dev/null || true
 done
@@ -118,13 +159,13 @@ done
 # CRD가 완전히 삭제될 때까지 대기 (최대 30초)
 echo "  Waiting for CRDs to be deleted..."
 for i in {1..15}; do
-  if ! kubectl get crd -o name 2>/dev/null | grep -qE "istio|cert-manager|argoproj|tigera|calico|projectcalico|external-secrets"; then
-    echo "  All CRDs deleted"
+  if ! kubectl get crd -o name 2>/dev/null | grep -qE "istio|tigera|calico|projectcalico|external-secrets"; then
+    echo "  All target CRDs deleted"
     break
   fi
   echo "  Waiting... ($i/15)"
   # 남은 CRD finalizer 제거 재시도
-  for crd in $(kubectl get crd -o name 2>/dev/null | grep -E "istio|cert-manager|argoproj|tigera|calico|projectcalico|external-secrets" 2>/dev/null || true); do
+  for crd in $(kubectl get crd -o name 2>/dev/null | grep -E "istio|tigera|calico|projectcalico|external-secrets" 2>/dev/null || true); do
     kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
   done
   sleep 2

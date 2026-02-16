@@ -150,6 +150,19 @@ kubectl label namespace dev istio-injection=disabled --overwrite 2>/dev/null || 
 # 포트 충돌 확인 (선택사항)
 # fix_port_conflict
 
+# TLS Secret 복원 (clean-apps에서 백업한 경우)
+TLS_BACKUP="/tmp/goormgb-tls-backup.yaml"
+if [[ -f "$TLS_BACKUP" ]]; then
+  echo ""
+  echo "=== Restoring TLS secret from backup ==="
+  if kubectl apply -n istio-system -f "$TLS_BACKUP" 2>/dev/null; then
+    echo "TLS secret restored!"
+  else
+    echo "TLS restore skipped (may need cert-manager to issue new cert)"
+  fi
+  rm -f "$TLS_BACKUP"
+fi
+
 echo ""
 echo "=== Istio Install Complete ==="
 echo ""
