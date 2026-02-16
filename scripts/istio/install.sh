@@ -47,6 +47,53 @@ fix_port_conflict() {
 
 echo "=== Istio ${ISTIO_VERSION} Install ==="
 
+# 이미 Istio가 정상 동작 중인지 확인
+if kubectl get deploy istiod -n istio-system &>/dev/null; then
+  READY=$(kubectl get deploy istiod -n istio-system -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+  if [[ "$READY" -gt 0 ]]; then
+    echo "Istio already installed and healthy (istiod ready: $READY)"
+    echo "Skipping installation."
+    kubectl get pods -n istio-system
+    exit 0
+  fi
+fi
+
+# 기존 Istio 리소스 정리
+echo "=== Cleaning up old Istio resources ==="
+
+# istioctl 경로 확인
+ISTIOCTL=""
+if command -v istioctl &>/dev/null; then
+  ISTIOCTL="istioctl"
+elif [[ -x "./istio-${ISTIO_VERSION}/bin/istioctl" ]]; then
+  ISTIOCTL="./istio-${ISTIO_VERSION}/bin/istioctl"
+elif [[ -x "./istio-1.24.2/bin/istioctl" ]]; then
+  ISTIOCTL="./istio-1.24.2/bin/istioctl"
+fi
+
+if [[ -n "$ISTIOCTL" ]]; then
+  echo "Uninstalling existing Istio with $ISTIOCTL..."
+  $ISTIOCTL uninstall --purge -y 2>/dev/null || true
+fi
+
+# 남은 리소스 강제 삭제
+kubectl delete deploy,svc,hpa --all -n istio-system --force --grace-period=0 --wait=false 2>/dev/null || true
+kubectl delete deploy,svc --all -n istio-ingress --force --grace-period=0 --wait=false 2>/dev/null || true
+
+# namespace 정리 (istio-ingress만, istio-system은 유지)
+if kubectl get ns istio-ingress &>/dev/null; then
+  kubectl delete ns istio-ingress --force --grace-period=0 --wait=false 2>/dev/null || true
+  kubectl get ns istio-ingress -o json 2>/dev/null | jq '.spec.finalizers = null' | \
+    kubectl replace --raw "/api/v1/namespaces/istio-ingress/finalize" -f - 2>/dev/null || true
+fi
+
+# Istio CRD 정리 (terminating 상태 처리)
+for crd in $(kubectl get crd -o name 2>/dev/null | grep "istio" 2>/dev/null || true); do
+  kubectl patch "$crd" -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+done
+
+sleep 3
+
 # istioctl 설치 확인
 if ! command -v istioctl &>/dev/null; then
   echo "Installing istioctl..."
