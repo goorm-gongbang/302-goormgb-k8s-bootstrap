@@ -99,8 +99,18 @@ setup-github-ssh:
 deploy-root-app:
 	@echo "=== Deploying Root Application ==="
 	kubectl apply -f argo-init/root-application.yaml
+	@echo "Waiting for root app to be created..."
+	@sleep 5
+	@echo "Triggering root app sync..."
+	@kubectl patch app root-dev -n argocd --type merge -p '{"operation":{"initiatedBy":{"username":"admin"},"sync":{}}}' 2>/dev/null || true
+	@echo "Waiting for apps to be created (60s)..."
+	@for i in 1 2 3 4 5 6; do \
+		echo "  Checking... ($$i/6)"; \
+		kubectl get app -n argocd 2>/dev/null | head -15; \
+		sleep 10; \
+	done
 	@echo ""
-	@echo "Root Application deployed. ArgoCD will sync all apps from helm repo."
+	@echo "Root Application deployed and synced."
 
 # === 유틸리티 ===
 fix-port-conflict:
