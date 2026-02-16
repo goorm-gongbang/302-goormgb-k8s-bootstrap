@@ -1,7 +1,7 @@
 # 302-goormgb-k8s-bootstrap Makefile
 # kubeadm 클러스터 초기 설정을 위한 명령어 모음
 
-.PHONY: help install-all install-calico install-eso install-cert-manager install-istio install-argocd \
+.PHONY: help install-all install-calico install-storage install-eso install-cert-manager install-istio install-argocd \
         deploy-root-app setup-github-ssh wait-sync run-ddns clean-ns clean-cluster fix-port-conflict \
         rbac-create-users ddns-test ddns-update
 
@@ -10,10 +10,11 @@ help:
 	@echo "=== kubeadm Bootstrap Commands ==="
 	@echo ""
 	@echo "초기 설치 (순서대로):"
-	@echo "  make install-all       - 전체 설치 (Calico → ESO → cert-manager → Istio → ArgoCD → Root App)"
+	@echo "  make install-all       - 전체 설치 (Calico → Storage → ESO → cert-manager → Istio → ArgoCD → Root App)"
 	@echo ""
 	@echo "개별 설치:"
 	@echo "  make install-calico    - Calico CNI 설치 (kubeadm 필수)"
+	@echo "  make install-storage   - Local Path Provisioner 설치 (StorageClass)"
 	@echo "  make install-eso       - External Secrets Operator 설치"
 	@echo "  make bootstrap-aws     - AWS credentials 등록 (수동 입력)"
 	@echo "  make install-cert-manager - cert-manager 설치"
@@ -33,7 +34,7 @@ help:
 	@echo "  make clean-cluster     - kubeadm 완전 초기화 (kubeadm reset)"
 
 # === 전체 설치 ===
-install-all: install-calico install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app wait-sync run-ddns
+install-all: install-calico install-storage install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app wait-sync run-ddns
 	@echo ""
 	@echo "=== All components installed ==="
 	@echo ""
@@ -55,6 +56,10 @@ run-ddns:
 install-calico:
 	@echo "=== Installing Calico CNI ==="
 	./scripts/calico/install.sh
+
+install-storage:
+	@echo "=== Installing Local Path Provisioner ==="
+	./scripts/storage/install.sh
 
 install-eso:
 	@echo "=== Installing ESO ==="
