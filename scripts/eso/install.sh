@@ -8,19 +8,31 @@ NAMESPACE="external-secrets"
 
 echo "=== External Secrets Operator Install ==="
 
-# 기존 ESO CRD가 terminating 상태면 완전히 삭제될 때까지 대기
+# 기존 ESO CRD가 terminating 상태면 강제 삭제
 if kubectl get crd externalsecrets.external-secrets.io &>/dev/null; then
   status=$(kubectl get crd externalsecrets.external-secrets.io -o jsonpath='{.metadata.deletionTimestamp}' 2>/dev/null || echo "")
   if [[ -n "$status" ]]; then
-    echo "ESO CRDs are terminating, waiting for deletion..."
-    for i in {1..30}; do
+    echo "ESO CRDs are terminating, forcing deletion..."
+    for crd in $(kubectl get crd -o name 2>/dev/null | grep "external-secrets" 2>/dev/null || true); do
+      kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+      kubectl delete "$crd" --force --grace-period=0 --wait=false 2>/dev/null || true
+    done
+    # namespace 정리
+    if kubectl get ns external-secrets &>/dev/null; then
+      kubectl delete ns external-secrets --force --grace-period=0 --wait=false 2>/dev/null || true
+      kubectl get ns external-secrets -o json 2>/dev/null | jq '.spec.finalizers = null' | \
+        kubectl replace --raw "/api/v1/namespaces/external-secrets/finalize" -f - 2>/dev/null || true
+    fi
+    # 삭제 완료 대기
+    for i in {1..15}; do
       if ! kubectl get crd externalsecrets.external-secrets.io &>/dev/null; then
         echo "  CRDs deleted"
         break
       fi
-      echo "  Waiting... ($i/30)"
-      # finalizer 제거 시도
-      kubectl patch crd externalsecrets.external-secrets.io -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+      echo "  Waiting... ($i/15)"
+      for crd in $(kubectl get crd -o name 2>/dev/null | grep "external-secrets" 2>/dev/null || true); do
+        kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+      done
       sleep 2
     done
   fi

@@ -54,7 +54,28 @@ if [[ -n "$ISTIOCTL" ]]; then
 fi
 
 echo ""
-echo "=== Step 5: Delete namespaces and force finalize ==="
+echo "=== Step 5: Delete Calico resources ==="
+# Installation/APIServer CR 삭제 (finalizer 제거)
+kubectl patch installation default -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+kubectl delete installation default --force --grace-period=0 2>/dev/null || true
+kubectl patch apiserver default -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+kubectl delete apiserver default --force --grace-period=0 2>/dev/null || true
+
+# IPPool 삭제
+for pool in $(kubectl get ippool -o name 2>/dev/null || true); do
+  kubectl patch "$pool" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete "$pool" --force --grace-period=0 2>/dev/null || true
+done
+
+# Calico namespace 내 모든 리소스 삭제
+for ns in calico-system calico-apiserver tigera-operator; do
+  kubectl delete deploy,ds,sts,rs,job --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+  kubectl delete pods --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+  kubectl delete svc,cm,secret,sa --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+done
+
+echo ""
+echo "=== Step 6: Delete namespaces and force finalize ==="
 for ns in $NAMESPACES; do
   if kubectl get ns "$ns" &>/dev/null; then
     echo "  Processing $ns..."
@@ -68,7 +89,7 @@ for ns in $NAMESPACES; do
 done
 
 echo ""
-echo "=== Step 6: Delete CRDs ==="
+echo "=== Step 7: Delete CRDs ==="
 # CRD finalizer 제거 후 삭제
 for crd in $(kubectl get crd -o name 2>/dev/null | grep -E "istio|cert-manager|argoproj|tigera|calico|projectcalico|external-secrets"); do
   kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
@@ -78,17 +99,26 @@ done
 # CRD가 완전히 삭제될 때까지 대기 (최대 30초)
 echo "  Waiting for CRDs to be deleted..."
 for i in {1..15}; do
-  remaining=$(kubectl get crd -o name 2>/dev/null | grep -E "istio|cert-manager|argoproj|tigera|calico|projectcalico|external-secrets" | wc -l)
-  if [[ "$remaining" -eq 0 ]]; then
+  if ! kubectl get crd -o name 2>/dev/null | grep -qE "istio|cert-manager|argoproj|tigera|calico|projectcalico|external-secrets"; then
     echo "  All CRDs deleted"
     break
   fi
-  echo "  Waiting... ($remaining CRDs remaining)"
+  echo "  Waiting... ($i/15)"
+  # 남은 CRD finalizer 제거 재시도
+  for crd in $(kubectl get crd -o name 2>/dev/null | grep -E "istio|cert-manager|argoproj|tigera|calico|projectcalico|external-secrets" 2>/dev/null || true); do
+    kubectl patch "$crd" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  done
   sleep 2
 done
 
 echo ""
-echo "=== Step 7: Final verification ==="
+echo "=== Step 8: Force delete orphan pods ==="
+for ns in $NAMESPACES; do
+  kubectl delete pods --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+done
+
+echo ""
+echo "=== Step 9: Final verification ==="
 sleep 2
 REMAINING=""
 for ns in $NAMESPACES; do

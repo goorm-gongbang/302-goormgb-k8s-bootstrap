@@ -22,13 +22,49 @@ echo ""
 if kubectl get daemonset -n calico-system calico-node &>/dev/null; then
   READY=$(kubectl get daemonset -n calico-system calico-node -o jsonpath='{.status.numberReady}' 2>/dev/null || echo "0")
   DESIRED=$(kubectl get daemonset -n calico-system calico-node -o jsonpath='{.status.desiredNumberScheduled}' 2>/dev/null || echo "0")
-  if [[ "$READY" == "$DESIRED" && "$READY" != "0" ]]; then
-    echo "✅ Calico already installed and healthy ($READY/$DESIRED nodes ready)"
-    echo "   Skipping installation."
+  POD_COUNT=$(kubectl get pods -n calico-system --no-headers 2>/dev/null | wc -l | tr -d ' ')
+  if [[ "$READY" == "$DESIRED" && "$READY" != "0" && "$POD_COUNT" -gt 0 ]]; then
+    echo "Calico already installed and healthy ($READY/$DESIRED nodes ready, $POD_COUNT pods)"
+    echo "Skipping installation."
     kubectl get pods -n calico-system
     exit 0
   fi
 fi
+
+# 기존 Calico CR 정리 (CRD는 유지, clean-ns에서 삭제)
+echo "=== Cleaning up old Calico CRs ==="
+
+# Installation/APIServer CR 삭제
+kubectl patch installation default -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+kubectl delete installation default --force --grace-period=0 --wait=false 2>/dev/null || true
+kubectl patch apiserver default -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+kubectl delete apiserver default --force --grace-period=0 --wait=false 2>/dev/null || true
+
+# IPPool 삭제 (있으면)
+for pool in $(kubectl get ippool -o name 2>/dev/null || true); do
+  kubectl patch "$pool" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete "$pool" --force --grace-period=0 2>/dev/null || true
+done
+
+# Calico 관련 namespace 내 리소스 정리
+for ns in calico-system calico-apiserver; do
+  if kubectl get ns "$ns" &>/dev/null; then
+    kubectl delete deploy,ds,sts --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+    kubectl delete pods --all -n "$ns" --force --grace-period=0 2>/dev/null || true
+  fi
+done
+
+# Installation/APIServer 삭제 대기
+echo "Waiting for CRs to be deleted..."
+for i in {1..10}; do
+  if ! kubectl get installation default &>/dev/null && ! kubectl get apiserver default &>/dev/null; then
+    echo "  Old CRs cleaned"
+    break
+  fi
+  kubectl patch installation default -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl patch apiserver default -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  sleep 2
+done
 
 # Step 0: 노드 어노테이션 정리 (WireGuard IP 충돌 방지)
 echo "=== Step 0: Cleaning node annotations ==="
@@ -55,28 +91,38 @@ for i in {1..60}; do
   sleep 3
 done
 
-# Step 2: Installation CR 생성
+# Step 2: Installation CR 생성 (항상 삭제 후 재생성)
 echo ""
 echo "=== Step 2: Creating Calico Installation ==="
 
-INSTALL_NEEDED=false
-if ! kubectl get installation default &>/dev/null; then
-  INSTALL_NEEDED=true
-else
-  STATUS=$(kubectl get installation default -o jsonpath='{.status.conditions[?(@.type=="Degraded")].status}' 2>/dev/null || echo "Unknown")
-  if [[ "$STATUS" == "True" ]]; then
-    echo "Installation is Degraded, recreating..."
-    kubectl patch installation default -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
-    kubectl delete installation default --force --grace-period=0 2>/dev/null || true
-    sleep 5
-    INSTALL_NEEDED=true
-  else
-    echo "Installation already exists, checking status..."
-  fi
+# 기존 Installation 삭제 (있으면)
+if kubectl get installation default &>/dev/null; then
+  echo "Deleting existing Installation..."
+  kubectl patch installation default -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete installation default --force --grace-period=0 --wait=false 2>/dev/null || true
+  sleep 3
 fi
 
-if [[ "$INSTALL_NEEDED" == "true" ]]; then
-  cat <<EOF | kubectl create -f -
+# 기존 APIServer 삭제 (있으면)
+if kubectl get apiserver default &>/dev/null; then
+  echo "Deleting existing APIServer..."
+  kubectl patch apiserver default -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete apiserver default --force --grace-period=0 --wait=false 2>/dev/null || true
+  sleep 2
+fi
+
+# Installation이 완전히 삭제될 때까지 대기
+for i in {1..15}; do
+  if ! kubectl get installation default &>/dev/null; then
+    break
+  fi
+  echo "  Waiting for Installation to be deleted... ($i/15)"
+  kubectl patch installation default -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  sleep 2
+done
+
+echo "Creating new Installation..."
+cat <<EOF | kubectl apply -f -
 apiVersion: operator.tigera.io/v1
 kind: Installation
 metadata:
@@ -92,7 +138,6 @@ spec:
       cidrs:
       - ${NODE_CIDR}
 EOF
-fi
 
 # Step 3: APIServer 설치
 echo ""
@@ -104,17 +149,14 @@ for i in {1..30}; do
   sleep 2
 done
 
-if ! kubectl get apiserver default &>/dev/null; then
-  cat <<EOF | kubectl create -f -
+echo "Creating APIServer..."
+cat <<EOF | kubectl apply -f -
 apiVersion: operator.tigera.io/v1
 kind: APIServer
 metadata:
   name: default
 spec: {}
 EOF
-else
-  echo "APIServer already exists, skipping..."
-fi
 
 # Step 4: calico-system namespace 대기
 echo ""
