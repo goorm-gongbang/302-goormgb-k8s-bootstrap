@@ -4,8 +4,8 @@ set -euo pipefail
 # DDNS 즉시 업데이트 (CronJob 안 기다리고 수동 실행)
 # Usage: ./scripts/ddns/update-now.sh
 
-NAMESPACE="${DDNS_NAMESPACE:-kube-system}"
-CRONJOB_NAME="ddns-route53-updater"
+NAMESPACE="${DDNS_NAMESPACE:-infra}"
+CRONJOB_NAME="ddns-route53-5m-updater"
 
 echo "=== DDNS Manual Update ==="
 

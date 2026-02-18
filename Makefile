@@ -2,7 +2,7 @@
 # kubeadm 클러스터 초기 설정을 위한 명령어 모음
 
 .PHONY: help install-all install-calico install-storage install-eso install-cert-manager install-istio install-argocd \
-        deploy-root-app setup-github-ssh wait-sync run-ddns run-ecr-creds clean-apps clean-cluster fix-port-conflict \
+        deploy-root-app setup-github-ssh wait-sync run-ddns run-ecr-creds clean-apps clean-all fix-port-conflict \
         rbac-create-users ddns-test ddns-update
 
 # 기본 타겟
@@ -31,10 +31,10 @@ help:
 	@echo ""
 	@echo "정리:"
 	@echo "  make clean-apps        - 앱 정리 (ArgoCD, cert-manager 유지)"
-	@echo "  make clean-cluster     - kubeadm 완전 초기화 (kubeadm reset)"
+	@echo "  make clean-all         - 완전 초기화 (ArgoCD 포함 전부 삭제, kubeadm 유지)"
 
 # === 전체 설치 ===
-install-all: install-calico install-storage install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app wait-sync run-ecr-creds run-ddns
+install-all: install-calico install-storage install-eso bootstrap-aws install-cert-manager install-istio install-argocd deploy-root-app wait-sync run-ecr-creds run-ddns
 	@echo ""
 	@echo "=== All components installed ==="
 	@echo ""
@@ -46,7 +46,16 @@ wait-sync:
 	@echo "=== Waiting for ArgoCD to sync apps (120s) ==="
 	@sleep 10
 	@echo "Waiting for root-dev app to sync..."
-	@kubectl wait --for=condition=Healthy application/root-dev -n argocd --timeout=120s 2>/dev/null || echo "root-dev not healthy yet, continuing..."
+	@for i in 1 2 3 4 5 6 7 8 9 10 11 12; do \
+		health=$$(kubectl get application root-dev -n argocd -o jsonpath='{.status.health.status}' 2>/dev/null); \
+		sync=$$(kubectl get application root-dev -n argocd -o jsonpath='{.status.sync.status}' 2>/dev/null); \
+		if [ "$$health" = "Healthy" ] && [ "$$sync" = "Synced" ]; then \
+			echo "  root-dev: Synced + Healthy"; \
+			break; \
+		fi; \
+		echo "  Waiting... ($$i/12) [sync=$$sync, health=$$health]"; \
+		sleep 10; \
+	done
 	@echo "Waiting for argocd-config to be created..."
 	@for i in 1 2 3 4 5 6 7 8 9 10; do \
 		if kubectl get application argocd-config -n argocd &>/dev/null; then \
@@ -56,9 +65,9 @@ wait-sync:
 		echo "  Waiting... ($$i/10)"; \
 		sleep 5; \
 	done
-	@kubectl wait --for=condition=Healthy application/argocd-config -n argocd --timeout=60s 2>/dev/null || echo "argocd-config not healthy yet"
-	@kubectl wait --for=condition=Healthy application/ddns-route53 -n argocd --timeout=60s 2>/dev/null || echo "DDNS app not synced yet, continuing..."
-	@echo "Syncing OutOfSync apps (istiod, cert-manager-config)..."
+	@echo "Checking app health..."
+	@kubectl get app -n argocd -o custom-columns='NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status' 2>/dev/null | head -20
+	@echo "Syncing OutOfSync apps..."
 	@kubectl annotate app istiod -n argocd argocd.argoproj.io/refresh=hard --overwrite 2>/dev/null || true
 	@kubectl annotate app cert-manager-config -n argocd argocd.argoproj.io/refresh=hard --overwrite 2>/dev/null || true
 	@kubectl annotate app istio-base -n argocd argocd.argoproj.io/refresh=hard --overwrite 2>/dev/null || true
@@ -145,5 +154,5 @@ ddns-update:
 clean-apps:
 	./scripts/clean-apps.sh
 
-clean-cluster:
-	./scripts/clean-cluster.sh
+clean-all:
+	./scripts/clean-all.sh

@@ -16,7 +16,7 @@ helm repo update
 helm upgrade --install cert-manager jetstack/cert-manager \
   -n "$NAMESPACE" \
   --create-namespace \
-  --set installCRDs=true \
+  --set crds.enabled=true \
   --set nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
   --set webhook.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
   --set cainjector.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \

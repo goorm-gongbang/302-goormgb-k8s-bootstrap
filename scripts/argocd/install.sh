@@ -68,24 +68,67 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 echo ""
 echo "=== Setting up GitHub SSH Key ==="
-kubectl apply -f "$REPO_ROOT/argo-init/external-secret-github.yaml"
 
-# Secret이 생성될 때까지 대기 (최대 60초)
+# 1. ESO가 준비될 때까지 대기
+echo "Checking ESO readiness..."
+for i in {1..30}; do
+  if kubectl get deployment -n external-secrets external-secrets -o jsonpath='{.status.readyReplicas}' 2>/dev/null | grep -q "1"; then
+    echo "  ESO is ready"
+    break
+  fi
+  echo "  Waiting for ESO... ($i/30)"
+  sleep 2
+done
+
+# 2. ClusterSecretStore가 Valid 상태인지 확인
+echo "Checking ClusterSecretStore..."
+for i in {1..30}; do
+  status=$(kubectl get clustersecretstore aws-secrets-manager -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "")
+  if [[ "$status" == "True" ]]; then
+    echo "  ClusterSecretStore is ready"
+    break
+  fi
+  echo "  Waiting for ClusterSecretStore... ($i/30)"
+  sleep 2
+done
+
+# 3. ExternalSecret 적용
+echo "Applying ExternalSecret..."
+if ! kubectl apply -f "$REPO_ROOT/argo-init/external-secret-github.yaml"; then
+  echo "ERROR: Failed to apply ExternalSecret"
+  exit 1
+fi
+sleep 2
+
+# 4. Secret이 생성될 때까지 대기 (최대 60초)
 echo "Waiting for repo-goormgb-helm secret..."
 for i in {1..30}; do
   if kubectl get secret repo-goormgb-helm -n argocd &>/dev/null; then
-    echo "  GitHub SSH secret ready"
-    break
+    # secret 내용 확인
+    if kubectl get secret repo-goormgb-helm -n argocd -o jsonpath='{.data.sshPrivateKey}' 2>/dev/null | grep -q "."; then
+      echo "  GitHub SSH secret ready"
+      break
+    fi
   fi
-  echo "  Waiting for secret... ($i/30)"
+  # ExternalSecret 상태 확인
+  es_status=$(kubectl get externalsecret repo-goormgb-helm -n argocd -o jsonpath='{.status.conditions[?(@.type=="Ready")].reason}' 2>/dev/null || echo "")
+  echo "  Waiting for secret... ($i/30) [ES status: $es_status]"
   sleep 2
 done
 
 # Secret 생성 확인
 if ! kubectl get secret repo-goormgb-helm -n argocd &>/dev/null; then
-  echo "WARNING: repo-goormgb-helm secret not created."
-  echo "Check: kubectl get externalsecret -n argocd"
-  echo "Check: kubectl describe externalsecret repo-goormgb-helm -n argocd"
+  echo ""
+  echo "ERROR: repo-goormgb-helm secret not created!"
+  echo ""
+  echo "Debug:"
+  kubectl get clustersecretstore aws-secrets-manager -o yaml 2>/dev/null | grep -A5 "status:" || true
+  kubectl get externalsecret repo-goormgb-helm -n argocd -o yaml 2>/dev/null | grep -A10 "status:" || true
+  echo ""
+  echo "Possible causes:"
+  echo "  1. AWS credentials not set: make bootstrap-aws"
+  echo "  2. Secret not in AWS SM: aws secretsmanager get-secret-value --secret-id dev/argocd/github-ssh"
+  exit 1
 fi
 
 echo ""
