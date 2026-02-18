@@ -112,16 +112,27 @@ istioctl x precheck
 EXTERNAL_IP="${EXTERNAL_IP:-192.168.45.154}"  # mini-might (worker node)
 
 # IstioOperator 매니페스트로 설치 (CLI 플래그 버그 회피)
+# istiod → CP 노드, ingressgateway → Worker 노드
 cat <<EOF | istioctl install -y -f -
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 spec:
   profile: default
   components:
+    pilot:
+      k8s:
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ""
+        tolerations:
+          - key: node-role.kubernetes.io/control-plane
+            operator: Exists
+            effect: NoSchedule
     ingressGateways:
       - name: istio-ingressgateway
         enabled: true
         k8s:
+          nodeSelector:
+            kubernetes.io/hostname: mini-might
           service:
             externalIPs:
               - ${EXTERNAL_IP}

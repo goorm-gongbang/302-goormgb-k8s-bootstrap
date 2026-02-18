@@ -37,11 +37,16 @@ helm repo update
 # --insecure: ArgoCD 자체 TLS 비활성화
 # 이유: Istio Gateway에서 TLS 종료 후 HTTP로 ArgoCD에 연결
 # 구조: Client → HTTPS → Istio Gateway → HTTP → ArgoCD
+# CP 노드에 배치 (nodeSelector + tolerations)
 helm upgrade --install argocd argo/argo-cd \
   -n "$NAMESPACE" \
   --create-namespace \
   --set 'server.extraArgs={--insecure}' \
-  --wait
+  --set global.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
+  --set global.tolerations[0].key="node-role.kubernetes.io/control-plane" \
+  --set global.tolerations[0].operator="Exists" \
+  --set global.tolerations[0].effect="NoSchedule" \
+  --wait --timeout=5m
 
 # ArgoCD CRD가 ready인지 확인
 echo "Waiting for ArgoCD CRDs to be ready..."

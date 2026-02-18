@@ -28,15 +28,19 @@ sudo rm -rf /etc/cni/net.d
 sudo rm -rf /var/lib/cni/
 
 echo ""
-echo "--- Cleaning up iptables ---"
-sudo iptables -F
-sudo iptables -t nat -F
-sudo iptables -t mangle -F
-sudo iptables -X
-
-echo ""
 echo "--- Removing kubeconfig ---"
 rm -f $HOME/.kube/config
+
+echo ""
+echo "=== WARNING: iptables 정리는 수동으로 하세요 ==="
+echo "원격 접속 중이라면 SSH가 끊길 수 있습니다!"
+echo "물리적 접근이 가능할 때만 아래 명령어를 실행하세요:"
+echo ""
+echo "  sudo iptables -F"
+echo "  sudo iptables -t nat -F"
+echo "  sudo iptables -t mangle -F"
+echo "  sudo iptables -X"
+echo ""
 
 echo ""
 echo "=== kubeadm Reset Complete ==="

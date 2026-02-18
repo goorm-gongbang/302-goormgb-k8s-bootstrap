@@ -21,7 +21,19 @@ helm upgrade --install cert-manager jetstack/cert-manager \
   --set webhook.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
   --set cainjector.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
   --set startupapicheck.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
-  --wait
+  --set tolerations[0].key="node-role.kubernetes.io/control-plane" \
+  --set tolerations[0].operator="Exists" \
+  --set tolerations[0].effect="NoSchedule" \
+  --set webhook.tolerations[0].key="node-role.kubernetes.io/control-plane" \
+  --set webhook.tolerations[0].operator="Exists" \
+  --set webhook.tolerations[0].effect="NoSchedule" \
+  --set cainjector.tolerations[0].key="node-role.kubernetes.io/control-plane" \
+  --set cainjector.tolerations[0].operator="Exists" \
+  --set cainjector.tolerations[0].effect="NoSchedule" \
+  --set startupapicheck.tolerations[0].key="node-role.kubernetes.io/control-plane" \
+  --set startupapicheck.tolerations[0].operator="Exists" \
+  --set startupapicheck.tolerations[0].effect="NoSchedule" \
+  --wait --timeout=5m
 
 echo ""
 echo "cert-manager installed."

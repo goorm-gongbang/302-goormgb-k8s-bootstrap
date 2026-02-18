@@ -53,7 +53,16 @@ helm upgrade --install external-secrets \
   --set nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
   --set webhook.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
   --set certController.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
-  --wait
+  --set tolerations[0].key="node-role.kubernetes.io/control-plane" \
+  --set tolerations[0].operator="Exists" \
+  --set tolerations[0].effect="NoSchedule" \
+  --set webhook.tolerations[0].key="node-role.kubernetes.io/control-plane" \
+  --set webhook.tolerations[0].operator="Exists" \
+  --set webhook.tolerations[0].effect="NoSchedule" \
+  --set certController.tolerations[0].key="node-role.kubernetes.io/control-plane" \
+  --set certController.tolerations[0].operator="Exists" \
+  --set certController.tolerations[0].effect="NoSchedule" \
+  --wait --timeout=5m
 
 # CRD 등록 대기
 echo "Waiting for CRDs to be registered..."

@@ -3,25 +3,28 @@ set -euo pipefail
 
 # AWS 자격증명 부트스트랩 (유일한 수동 secret)
 #
-# ESO, cert-manager(DNS-01), DDNS(Route53) 모두 같은 AWS 자격증명 사용.
+# ESO, cert-manager(DNS-01), DDNS(Route53), ECR-creds 모두 같은 AWS 자격증명 사용.
 # 각 네임스페이스에 secret을 생성함.
 #
 # Usage:
 #   ./scripts/eso/bootstrap-aws.sh
 #   AWS_ACCESS_KEY_ID=xxx AWS_SECRET_ACCESS_KEY=yyy ./scripts/eso/bootstrap-aws.sh
 
-# 자격증명이 필요한 네임스페이스 + secret 이름
-declare -A SECRETS=(
-  ["external-secrets"]="eso-aws-credentials"
-  ["cert-manager"]="route53-credentials"
-  ["kube-system"]="route53-ddns-credentials"
+# 네임스페이스:시크릿이름 형식으로 정의
+SECRETS_LIST=(
+  "external-secrets:eso-aws-credentials"
+  "cert-manager:route53-credentials"
+  "infra:route53-ddns-credentials"
+  "infra:ecr-aws-credentials"
 )
 
 echo "=== AWS Bootstrap ==="
 echo ""
-echo "Secrets will be created in:"
-for NS in "${!SECRETS[@]}"; do
-  echo "  - ${NS}/${SECRETS[$NS]}"
+echo "Secrets will be created:"
+for ENTRY in "${SECRETS_LIST[@]}"; do
+  NS="${ENTRY%%:*}"
+  SECRET_NAME="${ENTRY##*:}"
+  echo "  - ${NS}/${SECRET_NAME}"
 done
 echo ""
 
@@ -41,8 +44,9 @@ if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
   exit 1
 fi
 
-for NS in "${!SECRETS[@]}"; do
-  SECRET_NAME="${SECRETS[$NS]}"
+for ENTRY in "${SECRETS_LIST[@]}"; do
+  NS="${ENTRY%%:*}"
+  SECRET_NAME="${ENTRY##*:}"
 
   # 네임스페이스 생성 (없으면)
   kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f - 2>/dev/null
