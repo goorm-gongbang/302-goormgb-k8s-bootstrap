@@ -5,6 +5,7 @@ set -euo pipefail
 # Usage: ./scripts/argocd/install.sh
 
 NAMESPACE="argocd"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "=== ArgoCD Install ==="
 
@@ -41,6 +42,7 @@ helm repo update
 helm upgrade --install argocd argo/argo-cd \
   -n "$NAMESPACE" \
   --create-namespace \
+  -f "$SCRIPT_DIR/values.yaml" \
   --set 'server.extraArgs={--insecure}' \
   --set global.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
   --set global.tolerations[0].key="node-role.kubernetes.io/control-plane" \
@@ -63,7 +65,6 @@ done
 kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=60s 2>/dev/null || true
 
 # GitHub SSH Key ExternalSecret 적용 및 Secret 생성 대기
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 echo ""

@@ -1,0 +1,16 @@
+# ArgoCD Helm values for kubeadm cluster
+# Google OAuth + admin login 둘 다 가능
+
+configs:
+  cm:
+    url: "https://argocd.goormgb.help"
+    admin.enabled: "true"
+    oidc.config: |
+      name: Google
+      issuer: https://accounts.google.com
+      clientID: $argocd-google-oauth:clientId
+      clientSecret: $argocd-google-oauth:clientSecret
+      requestedScopes:
+        - openid
+        - profile
+        - email
