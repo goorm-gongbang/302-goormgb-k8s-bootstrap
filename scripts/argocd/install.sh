@@ -42,7 +42,6 @@ helm repo update
 helm upgrade --install argocd argo/argo-cd \
   -n "$NAMESPACE" \
   --create-namespace \
-  -f "$SCRIPT_DIR/values.yaml" \
   --set 'server.extraArgs={--insecure}' \
   --set global.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
   --set global.tolerations[0].key="node-role.kubernetes.io/control-plane" \
