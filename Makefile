@@ -58,6 +58,11 @@ wait-sync:
 	done
 	@kubectl wait --for=condition=Healthy application/argocd-config -n argocd --timeout=60s 2>/dev/null || echo "argocd-config not healthy yet"
 	@kubectl wait --for=condition=Healthy application/ddns-route53 -n argocd --timeout=60s 2>/dev/null || echo "DDNS app not synced yet, continuing..."
+	@echo "Syncing OutOfSync apps (istiod, cert-manager-config)..."
+	@kubectl annotate app istiod -n argocd argocd.argoproj.io/refresh=hard --overwrite 2>/dev/null || true
+	@kubectl annotate app cert-manager-config -n argocd argocd.argoproj.io/refresh=hard --overwrite 2>/dev/null || true
+	@kubectl annotate app istio-base -n argocd argocd.argoproj.io/refresh=hard --overwrite 2>/dev/null || true
+	@sleep 5
 
 run-ecr-creds:
 	@echo "=== Running ECR Creds Refresh ==="

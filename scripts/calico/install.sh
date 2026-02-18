@@ -82,6 +82,14 @@ kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.
 echo "Waiting for Tigera Operator deployment..."
 kubectl wait --for=condition=Available deployment/tigera-operator -n tigera-operator --timeout=${TIMEOUT}s
 
+# tigera-operator를 CP 노드에 배치
+echo "Patching tigera-operator to run on CP node..."
+kubectl patch deployment tigera-operator -n tigera-operator --type=json -p='[
+  {"op": "add", "path": "/spec/template/spec/nodeSelector", "value": {"kubernetes.io/hostname": "mini-gmk"}},
+  {"op": "add", "path": "/spec/template/spec/tolerations", "value": [{"key": "node-role.kubernetes.io/control-plane", "operator": "Exists", "effect": "NoSchedule"}]}
+]' 2>/dev/null || true
+kubectl rollout status deployment/tigera-operator -n tigera-operator --timeout=60s || true
+
 echo "Waiting for Installation CRD..."
 for i in {1..60}; do
   if kubectl get crd installations.operator.tigera.io &>/dev/null; then
@@ -128,6 +136,13 @@ kind: Installation
 metadata:
   name: default
 spec:
+  # Calico 컨트롤 플레인을 CP 노드에 배치 (typha, kube-controllers)
+  controlPlaneNodeSelector:
+    kubernetes.io/hostname: mini-gmk
+  controlPlaneTolerations:
+    - key: "node-role.kubernetes.io/control-plane"
+      operator: "Exists"
+      effect: "NoSchedule"
   calicoNetwork:
     ipPools:
     - cidr: ${POD_CIDR}

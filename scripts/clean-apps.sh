@@ -64,7 +64,7 @@ done
 # 삭제 대기 (cert-manager 제외하고 카운트)
 echo "  Waiting for apps to be deleted..."
 for i in {1..15}; do
-  remaining=$(kubectl get applications.argoproj.io -n argocd --no-headers 2>/dev/null | grep -cvE "cert-manager" || echo "0")
+  remaining=$(kubectl get applications.argoproj.io -n argocd --no-headers 2>/dev/null | grep -cvE "cert-manager" 2>/dev/null) || remaining=0
   if [[ "$remaining" -eq 0 ]]; then
     echo "  All target ArgoCD apps deleted"
     break
