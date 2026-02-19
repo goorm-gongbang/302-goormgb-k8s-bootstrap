@@ -39,8 +39,12 @@ install-all: install-calico install-storage install-eso bootstrap-aws install-ce
 	@echo "=== All components installed ==="
 	@echo ""
 	@echo "ArgoCD UI:"
-	@echo "  URL: https://argocd.goormgb.space"
-	@echo "  Login: Google OAuth (등록된 이메일만 접근 가능)"
+	@echo "  URL: https://argocd.goormgb.help"
+	@echo ""
+	@echo "Login 방법:"
+	@echo "  1. Google OAuth (등록된 이메일만 접근 가능)"
+	@echo "  2. admin 계정:"
+	@echo "     kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo"
 
 wait-sync:
 	@echo "=== Waiting for ArgoCD to sync apps (120s) ==="
