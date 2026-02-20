@@ -114,6 +114,35 @@ for ns in $NAMESPACES; do
   done
 done
 
+# PVC 완전 삭제 대기
+echo "  Waiting for PVCs to be fully deleted..."
+for i in {1..30}; do
+  remaining=$(kubectl get pvc -A --no-headers 2>/dev/null | grep -E "data|monitoring" | wc -l)
+  if [[ "$remaining" -eq 0 ]]; then
+    echo "  All data/monitoring PVCs deleted"
+    break
+  fi
+  echo "  Waiting for $remaining PVCs to delete... ($i/30)"
+  # 남아있는 PVC들 finalizer 재시도
+  for ns in data monitoring; do
+    for pvc in $(kubectl get pvc -n "$ns" -o name 2>/dev/null || true); do
+      kubectl patch "$pvc" -n "$ns" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+    done
+  done
+  sleep 2
+done
+
+# PVC 삭제 확인
+echo ""
+echo "=== PVC Status Check ==="
+remaining_pvcs=$(kubectl get pvc -A --no-headers 2>/dev/null | grep -vE "^kube-system" || true)
+if [[ -z "$remaining_pvcs" ]]; then
+  echo "  All PVCs deleted successfully"
+else
+  echo "  Warning: Some PVCs still remain:"
+  echo "$remaining_pvcs"
+fi
+
 echo ""
 echo "=== Step 8: Delete all namespaces ==="
 for ns in $NAMESPACES; do
