@@ -14,7 +14,7 @@ spec:
   source:
     repoURL: git@github.com:goorm-gongbang/303-goormgb-k8s-helm.git
     targetRevision: argocd-sync/dev
-    path: dev/apps
+    path: dev/root
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
