@@ -60,15 +60,21 @@ wait-sync:
 		echo "  Waiting... ($$i/12) [sync=$$sync, health=$$health]"; \
 		sleep 10; \
 	done
-	@echo "Waiting for argocd-config to be created..."
+	@echo "Waiting for argocd-config to be created and synced..."
 	@for i in 1 2 3 4 5 6 7 8 9 10; do \
 		if kubectl get application argocd-config -n argocd &>/dev/null; then \
-			echo "argocd-config created!"; \
-			break; \
+			sync=$$(kubectl get application argocd-config -n argocd -o jsonpath='{.status.sync.status}' 2>/dev/null); \
+			if [ "$$sync" = "Synced" ]; then \
+				echo "argocd-config synced!"; \
+				break; \
+			fi; \
 		fi; \
 		echo "  Waiting... ($$i/10)"; \
 		sleep 5; \
 	done
+	@echo "Restarting ArgoCD server to load OIDC config..."
+	@kubectl rollout restart deployment argocd-server -n argocd
+	@kubectl rollout status deployment argocd-server -n argocd --timeout=60s
 	@echo "Checking app health..."
 	@kubectl get app -n argocd -o custom-columns='NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status' 2>/dev/null | head -20
 	@echo "Syncing OutOfSync apps..."
