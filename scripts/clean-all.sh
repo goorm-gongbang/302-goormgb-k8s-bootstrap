@@ -105,10 +105,38 @@ for i in {1..10}; do
 done
 
 echo ""
-echo "=== Step 7: Delete PVCs with finalizers ==="
+echo "=== Step 7: Delete PVs and PVCs (PV → PVC → NS 순서) ==="
+
+# Step 7-1: data, monitoring 네임스페이스의 PV 먼저 삭제
+echo "  Step 7-1: Deleting PVs bound to data/monitoring..."
+for pv in $(kubectl get pv -o json 2>/dev/null | jq -r '.items[] | select(.spec.claimRef.namespace == "data" or .spec.claimRef.namespace == "monitoring") | .metadata.name' || true); do
+  echo "    Removing finalizers from PV $pv..."
+  kubectl patch pv "$pv" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+  kubectl delete pv "$pv" --force --grace-period=0 --wait=false 2>/dev/null || true
+done
+
+# PV 삭제 대기
+echo "  Waiting for PVs to be deleted..."
+for i in {1..15}; do
+  remaining=$(kubectl get pv -o json 2>/dev/null | jq -r '.items[] | select(.spec.claimRef.namespace == "data" or .spec.claimRef.namespace == "monitoring") | .metadata.name' | wc -l)
+  if [[ "$remaining" -eq 0 ]]; then
+    echo "  All data/monitoring PVs deleted"
+    break
+  fi
+  echo "  Waiting for $remaining PVs... ($i/15)"
+  # 남아있는 PV finalizer 재시도
+  for pv in $(kubectl get pv -o json 2>/dev/null | jq -r '.items[] | select(.spec.claimRef.namespace == "data" or .spec.claimRef.namespace == "monitoring") | .metadata.name' || true); do
+    kubectl patch pv "$pv" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+    kubectl delete pv "$pv" --force --grace-period=0 --wait=false 2>/dev/null || true
+  done
+  sleep 2
+done
+
+# Step 7-2: 모든 네임스페이스의 PVC 삭제
+echo "  Step 7-2: Deleting PVCs..."
 for ns in $NAMESPACES; do
   for pvc in $(kubectl get pvc -n "$ns" -o name 2>/dev/null || true); do
-    echo "  Removing finalizers from $pvc in $ns..."
+    echo "    Removing finalizers from $pvc in $ns..."
     kubectl patch "$pvc" -n "$ns" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
     kubectl delete "$pvc" -n "$ns" --force --grace-period=0 --wait=false 2>/dev/null || true
   done
@@ -116,14 +144,18 @@ done
 
 # PVC 완전 삭제 대기
 echo "  Waiting for PVCs to be fully deleted..."
-for i in {1..30}; do
+for i in {1..20}; do
   remaining=$(kubectl get pvc -A --no-headers 2>/dev/null | grep -E "data|monitoring" | wc -l)
   if [[ "$remaining" -eq 0 ]]; then
     echo "  All data/monitoring PVCs deleted"
     break
   fi
-  echo "  Waiting for $remaining PVCs to delete... ($i/30)"
-  # 남아있는 PVC들 finalizer 재시도
+  echo "  Waiting for $remaining PVCs to delete... ($i/20)"
+  # 남아있는 PVC들 - PV도 다시 확인
+  for pv in $(kubectl get pv -o json 2>/dev/null | jq -r '.items[] | select(.spec.claimRef.namespace == "data" or .spec.claimRef.namespace == "monitoring") | .metadata.name' || true); do
+    kubectl patch pv "$pv" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+    kubectl delete pv "$pv" --force --grace-period=0 --wait=false 2>/dev/null || true
+  done
   for ns in data monitoring; do
     for pvc in $(kubectl get pvc -n "$ns" -o name 2>/dev/null || true); do
       kubectl patch "$pvc" -n "$ns" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
@@ -132,15 +164,33 @@ for i in {1..30}; do
   sleep 2
 done
 
-# PVC 삭제 확인
+# Step 7-3: 유령 PVC 처리 (네임스페이스 삭제됐지만 PVC 남은 경우)
+echo "  Step 7-3: Cleaning orphaned PVCs..."
+orphaned_pvs=$(kubectl get pv -o json 2>/dev/null | jq -r '.items[] | select(.status.phase == "Bound" or .status.phase == "Released") | select(.spec.claimRef.namespace == "data" or .spec.claimRef.namespace == "monitoring") | .metadata.name' || true)
+if [[ -n "$orphaned_pvs" ]]; then
+  for pv in $orphaned_pvs; do
+    echo "    Force deleting orphaned PV $pv..."
+    kubectl patch pv "$pv" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+    kubectl delete pv "$pv" --force --grace-period=0 --wait=false 2>/dev/null || true
+  done
+fi
+
+# 최종 확인
 echo ""
-echo "=== PVC Status Check ==="
-remaining_pvcs=$(kubectl get pvc -A --no-headers 2>/dev/null | grep -vE "^kube-system" || true)
-if [[ -z "$remaining_pvcs" ]]; then
-  echo "  All PVCs deleted successfully"
+echo "=== PV/PVC Status Check ==="
+remaining_pvs=$(kubectl get pv --no-headers 2>/dev/null | grep -E "data/|monitoring/" || true)
+remaining_pvcs=$(kubectl get pvc -A --no-headers 2>/dev/null | grep -E "^data |^monitoring " || true)
+if [[ -z "$remaining_pvs" && -z "$remaining_pvcs" ]]; then
+  echo "  All data/monitoring PVs and PVCs deleted successfully"
 else
-  echo "  Warning: Some PVCs still remain:"
-  echo "$remaining_pvcs"
+  if [[ -n "$remaining_pvs" ]]; then
+    echo "  Warning: Some PVs still remain:"
+    echo "$remaining_pvs"
+  fi
+  if [[ -n "$remaining_pvcs" ]]; then
+    echo "  Warning: Some PVCs still remain:"
+    echo "$remaining_pvcs"
+  fi
 fi
 
 echo ""
