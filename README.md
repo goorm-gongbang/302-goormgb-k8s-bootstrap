@@ -102,7 +102,7 @@ make clean-cluster        # kubeadm 완전 초기화
 
 ```bash
 # ArgoCD UI
-https://argocd.goormgb.homes
+https://argocd.goormgb.space
 
 # Application 상태
 kubectl get applications -n argocd
