@@ -34,7 +34,7 @@ help:
 	@echo "  make clean-all         - 완전 초기화 (ArgoCD 포함 전부 삭제, kubeadm 유지)"
 
 # === 전체 설치 ===
-install-all: install-calico install-storage install-eso bootstrap-aws install-cert-manager install-istio install-argocd deploy-root-app wait-sync run-ecr-creds run-ddns
+install-all: install-calico install-storage install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app wait-sync run-ecr-creds run-ddns
 	@echo ""
 	@echo "=== All components installed ==="
 	@echo ""
