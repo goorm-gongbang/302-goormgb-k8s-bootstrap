@@ -92,13 +92,15 @@ for i in {1..30}; do
   sleep 2
 done
 
-# 3. ExternalSecret 적용
+# 3. ExternalSecret 삭제 후 재적용 (stale 상태 방지)
 echo "Applying ExternalSecret..."
+kubectl delete externalsecret repo-goormgb-helm -n argocd 2>/dev/null || true
+sleep 2
 if ! kubectl apply -f "$REPO_ROOT/argo-init/external-secret-github.yaml"; then
   echo "ERROR: Failed to apply ExternalSecret"
   exit 1
 fi
-sleep 2
+sleep 3
 
 # 4. Secret이 생성될 때까지 대기 (최대 60초)
 echo "Waiting for repo-goormgb-helm secret..."
