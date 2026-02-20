@@ -2,7 +2,7 @@
 # kubeadm 클러스터 초기 설정을 위한 명령어 모음
 
 .PHONY: help install-all install-calico install-storage install-eso install-cert-manager install-istio install-argocd \
-        deploy-root-app setup-github-ssh wait-sync run-ddns run-ecr-creds clean-apps clean-all fix-port-conflict \
+        deploy-root-app setup-github-ssh setup-etcd-secret wait-sync run-ddns run-ecr-creds clean-apps clean-all fix-port-conflict \
         rbac-create-users ddns-test ddns-update
 
 # 기본 타겟
@@ -34,7 +34,7 @@ help:
 	@echo "  make clean-all         - 완전 초기화 (ArgoCD 포함 전부 삭제, kubeadm 유지)"
 
 # === 전체 설치 ===
-install-all: install-calico install-storage install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app wait-sync run-ecr-creds run-ddns
+install-all: install-calico install-storage install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app setup-etcd-secret wait-sync run-ecr-creds run-ddns
 	@echo ""
 	@echo "=== All components installed ==="
 	@echo ""
@@ -146,6 +146,13 @@ deploy-root-app:
 	done
 	@echo ""
 	@echo "Root Application deployed and synced."
+
+setup-etcd-secret:
+	@echo "=== Setting up etcd monitoring ==="
+	@chmod +x ./scripts/monitoring/enable-etcd-metrics.sh
+	@./scripts/monitoring/enable-etcd-metrics.sh
+	@chmod +x ./scripts/monitoring/create-etcd-secret.sh
+	@./scripts/monitoring/create-etcd-secret.sh
 
 # === 유틸리티 ===
 fix-port-conflict:
