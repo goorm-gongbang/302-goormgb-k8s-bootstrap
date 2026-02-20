@@ -80,10 +80,10 @@ wait-sync:
 run-ecr-creds:
 	@echo "=== Running ECR Creds Refresh ==="
 	@kubectl wait --for=condition=Healthy application/ecr-creds -n argocd --timeout=120s 2>/dev/null || true
-	@kubectl create job --from=cronjob/ecr-creds-refresh ecr-init-$$(date +%s) -n kube-system 2>/dev/null || true
+	@kubectl create job --from=cronjob/ecr-creds-12h-refresher ecr-init-$$(date +%s) -n infra 2>/dev/null || true
 	@echo "Waiting for ECR creds job..."
 	@sleep 10
-	@kubectl get secret -n dev-app 2>/dev/null | grep -q ecr && echo "ECR secret created in dev-app" || echo "ECR secret not yet created. Run 'make run-ecr-creds' later."
+	@kubectl get secret -n dev-webs 2>/dev/null | grep -q ecr && echo "ECR secret created in dev-webs" || echo "ECR secret not yet created. Run 'make run-ecr-creds' later."
 
 run-ddns:
 	@echo "=== Running DDNS Update ==="
