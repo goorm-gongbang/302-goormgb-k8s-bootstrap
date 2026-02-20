@@ -39,7 +39,7 @@ install-all: install-calico install-storage install-eso bootstrap-aws install-ce
 	@echo "=== All components installed ==="
 	@echo ""
 	@echo "ArgoCD UI:"
-	@echo "  URL: https://argocd.goormgb.help"
+	@echo "  URL: https://argocd.goormgb.homes"
 	@echo ""
 	@echo "Login 방법:"
 	@echo "  1. Google OAuth (등록된 이메일만 접근 가능)"
