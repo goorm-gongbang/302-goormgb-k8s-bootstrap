@@ -134,6 +134,26 @@ if ! kubectl get secret repo-goormgb-helm -n argocd &>/dev/null; then
 fi
 
 echo ""
+echo "=== Applying RBAC from ESO ==="
+
+# ESO RBAC Secret이 생성될 때까지 대기
+echo "Waiting for argocd-rbac-eso secret..."
+for i in {1..30}; do
+  if kubectl get secret argocd-rbac-eso -n argocd &>/dev/null; then
+    policy=$(kubectl get secret argocd-rbac-eso -n argocd -o jsonpath='{.data.policy_csv}' 2>/dev/null | base64 -d || echo "")
+    if [[ -n "$policy" ]]; then
+      echo "  RBAC secret ready"
+      # ConfigMap 업데이트
+      kubectl patch cm argocd-rbac-cm -n argocd --type merge -p "{\"data\":{\"policy.csv\":\"$policy\",\"policy.default\":\"role:none\",\"scopes\":\"[email]\"}}"
+      echo "  RBAC ConfigMap updated"
+      break
+    fi
+  fi
+  echo "  Waiting for RBAC secret... ($i/30)"
+  sleep 2
+done
+
+echo ""
 echo "=== ArgoCD Installed ==="
 echo ""
 echo "Initial admin password:"
