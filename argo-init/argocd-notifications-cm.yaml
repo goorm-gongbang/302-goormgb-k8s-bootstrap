@@ -1,0 +1,116 @@
+# ArgoCD Notifications ConfigMap
+# Discord로 배포 알림 전송
+#
+# 사전 준비:
+# 1. external-secret-discord.yaml 적용
+# 2. argocd-notifications-secret 생성 확인
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  # Discord Webhook 서비스 정의
+  service.webhook.discord: |
+    url: $discord-webhook-url
+    headers:
+      - name: Content-Type
+        value: application/json
+
+  # 템플릿: 배포 성공
+  template.app-deployed: |
+    webhook:
+      discord:
+        method: POST
+        body: |
+          {
+            "embeds": [{
+              "title": "✅ 배포 성공",
+              "description": "**{{.app.metadata.name}}**이(가) 배포되었습니다.",
+              "color": 3066993,
+              "fields": [
+                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
+                {"name": "Revision", "value": "{{.app.status.sync.revision | substr 0 7}}", "inline": true}
+              ],
+              "timestamp": "{{.app.status.operationState.finishedAt}}"
+            }]
+          }
+
+  # 템플릿: 배포 실패
+  template.app-deploy-failed: |
+    webhook:
+      discord:
+        method: POST
+        body: |
+          {
+            "embeds": [{
+              "title": "❌ 배포 실패",
+              "description": "**{{.app.metadata.name}}** 배포에 실패했습니다.",
+              "color": 15158332,
+              "fields": [
+                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
+                {"name": "Error", "value": "{{.app.status.operationState.message | substr 0 200}}", "inline": false}
+              ],
+              "timestamp": "{{.app.status.operationState.finishedAt}}"
+            }]
+          }
+
+  # 템플릿: Sync 시작
+  template.app-sync-running: |
+    webhook:
+      discord:
+        method: POST
+        body: |
+          {
+            "embeds": [{
+              "title": "🔄 Sync 진행 중",
+              "description": "**{{.app.metadata.name}}** 동기화 중...",
+              "color": 16776960,
+              "fields": [
+                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true}
+              ]
+            }]
+          }
+
+  # 템플릿: Health Degraded
+  template.app-health-degraded: |
+    webhook:
+      discord:
+        method: POST
+        body: |
+          {
+            "embeds": [{
+              "title": "⚠️ Health Degraded",
+              "description": "**{{.app.metadata.name}}** 상태가 비정상입니다.",
+              "color": 16744448,
+              "fields": [
+                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
+                {"name": "Health", "value": "{{.app.status.health.status}}", "inline": true}
+              ]
+            }]
+          }
+
+  # 트리거 정의
+  trigger.on-deployed: |
+    - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+      send: [app-deployed]
+
+  trigger.on-sync-running: |
+    - when: app.status.operationState.phase in ['Running']
+      send: [app-sync-running]
+
+  trigger.on-deploy-failed: |
+    - when: app.status.operationState.phase in ['Error', 'Failed']
+      send: [app-deploy-failed]
+
+  trigger.on-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-health-degraded]
+
+  # 기본 트리거 (모든 앱에 적용)
+  defaultTriggers: |
+    - on-sync-running
+    - on-deployed
+    - on-deploy-failed
+    - on-health-degraded
