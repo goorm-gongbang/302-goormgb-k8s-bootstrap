@@ -11,9 +11,16 @@ metadata:
   name: argocd-notifications-cm
   namespace: argocd
 data:
-  # Discord Webhook 서비스 정의
+  # Discord Webhook 서비스 정의 - 앱 배포용
   service.webhook.discord: |
     url: $discord-webhook-url
+    headers:
+      - name: Content-Type
+        value: application/json
+
+  # Discord Webhook 서비스 정의 - 인프라용
+  service.webhook.discord-infra: |
+    url: $discord-webhook-infra-url
     headers:
       - name: Content-Type
         value: application/json
@@ -91,6 +98,74 @@ data:
             }]
           }
 
+  # === 인프라용 템플릿 (discord-infra 채널) ===
+  template.infra-deployed: |
+    webhook:
+      discord-infra:
+        method: POST
+        body: |
+          {
+            "embeds": [{
+              "title": "✅ 인프라 배포 성공",
+              "description": "**{{.app.metadata.name}}** 배포 완료",
+              "color": 3066993,
+              "fields": [
+                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
+                {"name": "Revision", "value": "{{.app.status.sync.revision | substr 0 7}}", "inline": true}
+              ],
+              "timestamp": "{{.app.status.operationState.finishedAt}}"
+            }]
+          }
+
+  template.infra-deploy-failed: |
+    webhook:
+      discord-infra:
+        method: POST
+        body: |
+          {
+            "embeds": [{
+              "title": "❌ 인프라 배포 실패",
+              "description": "**{{.app.metadata.name}}** 실패",
+              "color": 15158332,
+              "fields": [
+                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
+                {"name": "Error", "value": "{{.app.status.operationState.message | substr 0 200}}", "inline": false}
+              ],
+              "timestamp": "{{.app.status.operationState.finishedAt}}"
+            }]
+          }
+
+  template.infra-health-degraded: |
+    webhook:
+      discord-infra:
+        method: POST
+        body: |
+          {
+            "embeds": [{
+              "title": "⚠️ 인프라 Health Degraded",
+              "description": "**{{.app.metadata.name}}** 상태 비정상",
+              "color": 16744448,
+              "fields": [
+                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
+                {"name": "Health", "value": "{{.app.status.health.status}}", "inline": true}
+              ]
+            }]
+          }
+
+  # === 인프라용 트리거 ===
+  trigger.on-infra-deployed: |
+    - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+      send: [infra-deployed]
+
+  trigger.on-infra-deploy-failed: |
+    - when: app.status.operationState.phase in ['Error', 'Failed']
+      send: [infra-deploy-failed]
+
+  trigger.on-infra-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [infra-health-degraded]
+
+  # === 앱용 트리거 ===
   # 트리거 정의
   trigger.on-deployed: |
     - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
