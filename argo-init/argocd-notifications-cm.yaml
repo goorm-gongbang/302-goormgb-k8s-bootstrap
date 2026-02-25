@@ -34,7 +34,7 @@ data:
           {
             "embeds": [{
               "title": "✅ 배포 성공",
-              "description": "**{{.app.metadata.name}}**이(가) 배포되었습니다.",
+              "description": "**{{.app.metadata.name}}** 배포 완료\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/{{.app.metadata.name}})",
               "color": 3066993,
               "fields": [
                 {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
@@ -53,11 +53,11 @@ data:
           {
             "embeds": [{
               "title": "❌ 배포 실패",
-              "description": "**{{.app.metadata.name}}** 배포에 실패했습니다.",
+              "description": "**{{.app.metadata.name}}** 배포 실패\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/{{.app.metadata.name}})",
               "color": 15158332,
               "fields": [
                 {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
-                {"name": "Error", "value": "{{.app.status.operationState.message | substr 0 200}}", "inline": false}
+                {"name": "Error", "value": "```{{.app.status.operationState.message | substr 0 500}}```", "inline": false}
               ],
               "timestamp": "{{.app.status.operationState.finishedAt}}"
             }]
@@ -72,7 +72,7 @@ data:
           {
             "embeds": [{
               "title": "🔄 Sync 진행 중",
-              "description": "**{{.app.metadata.name}}** 동기화 중...",
+              "description": "**{{.app.metadata.name}}** 동기화 시작\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/{{.app.metadata.name}})",
               "color": 16776960,
               "fields": [
                 {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true}
@@ -89,11 +89,12 @@ data:
           {
             "embeds": [{
               "title": "⚠️ Health Degraded",
-              "description": "**{{.app.metadata.name}}** 상태가 비정상입니다.",
+              "description": "**{{.app.metadata.name}}** 상태 비정상\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/{{.app.metadata.name}})",
               "color": 16744448,
               "fields": [
                 {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
-                {"name": "Health", "value": "{{.app.status.health.status}}", "inline": true}
+                {"name": "Health", "value": "{{.app.status.health.status}}", "inline": true},
+                {"name": "Message", "value": "{{.app.status.conditions | first | default dict | dig \"message\" \"N/A\" | substr 0 300}}", "inline": false}
               ]
             }]
           }
@@ -125,11 +126,12 @@ data:
           {
             "embeds": [{
               "title": "❌ 인프라 배포 실패",
-              "description": "**{{.app.metadata.name}}** 실패",
+              "description": "**{{.app.metadata.name}}** 배포 실패\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/{{.app.metadata.name}})",
               "color": 15158332,
               "fields": [
                 {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
-                {"name": "Error", "value": "{{.app.status.operationState.message | substr 0 200}}", "inline": false}
+                {"name": "Phase", "value": "{{.app.status.operationState.phase}}", "inline": true},
+                {"name": "Error", "value": "```{{.app.status.operationState.message | substr 0 500}}```", "inline": false}
               ],
               "timestamp": "{{.app.status.operationState.finishedAt}}"
             }]
@@ -143,11 +145,12 @@ data:
           {
             "embeds": [{
               "title": "⚠️ 인프라 Health Degraded",
-              "description": "**{{.app.metadata.name}}** 상태 비정상",
+              "description": "**{{.app.metadata.name}}** 상태 비정상\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/{{.app.metadata.name}})",
               "color": 16744448,
               "fields": [
                 {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
-                {"name": "Health", "value": "{{.app.status.health.status}}", "inline": true}
+                {"name": "Health", "value": "{{.app.status.health.status}}", "inline": true},
+                {"name": "Message", "value": "{{.app.status.conditions | first | default dict | dig \"message\" \"N/A\" | substr 0 300}}", "inline": false}
               ]
             }]
           }
