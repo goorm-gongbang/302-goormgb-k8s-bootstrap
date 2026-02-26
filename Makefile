@@ -3,7 +3,7 @@
 
 .PHONY: help install-all install-calico install-storage install-eso install-cert-manager install-istio install-argocd \
         deploy-root-app setup-github-ssh setup-etcd-secret wait-sync run-ddns run-ecr-creds clean-apps clean-all fix-port-conflict \
-        rbac-create-users ddns-test ddns-update
+        rbac-create-users ddns-test ddns-update install-prometheus-crds
 
 # 기본 타겟
 help:
@@ -19,6 +19,7 @@ help:
 	@echo "  make bootstrap-aws     - AWS credentials 등록 (수동 입력)"
 	@echo "  make install-cert-manager - cert-manager 설치"
 	@echo "  make install-istio     - Istio 설치"
+	@echo "  make install-prometheus-crds - Prometheus Operator CRD 설치"
 	@echo "  make install-argocd    - ArgoCD 설치"
 	@echo "  make setup-github-ssh  - GitHub SSH Key 설정 (ExternalSecret)"
 	@echo "  make deploy-root-app   - ArgoCD Root Application 배포"
@@ -34,7 +35,7 @@ help:
 	@echo "  make clean-all         - 완전 초기화 (ArgoCD 포함 전부 삭제, kubeadm 유지)"
 
 # === 전체 설치 ===
-install-all: install-calico install-storage install-eso bootstrap-aws install-cert-manager install-istio install-argocd setup-github-ssh deploy-root-app setup-etcd-secret wait-sync run-ecr-creds run-ddns
+install-all: install-calico install-storage install-eso bootstrap-aws install-cert-manager install-istio install-prometheus-crds install-argocd setup-github-ssh deploy-root-app setup-etcd-secret wait-sync run-ecr-creds run-ddns
 	@echo ""
 	@echo "=== All components installed ==="
 	@echo ""
@@ -119,6 +120,10 @@ install-cert-manager:
 install-istio:
 	@echo "=== Installing Istio ==="
 	./scripts/istio/install.sh
+
+install-prometheus-crds:
+	@echo "=== Installing Prometheus Operator CRDs ==="
+	./scripts/monitoring/install-crds.sh
 
 install-argocd:
 	@echo "=== Installing ArgoCD ==="
