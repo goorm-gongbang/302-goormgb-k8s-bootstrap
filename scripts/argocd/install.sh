@@ -143,9 +143,13 @@ for i in {1..30}; do
     policy=$(kubectl get secret argocd-rbac-eso -n argocd -o jsonpath='{.data.policy_csv}' 2>/dev/null | base64 -d || echo "")
     if [[ -n "$policy" ]]; then
       echo "  RBAC secret ready"
-      # ConfigMap 업데이트
-      kubectl patch cm argocd-rbac-cm -n argocd --type merge -p "{\"data\":{\"policy.csv\":\"$policy\",\"policy.default\":\"role:none\",\"scopes\":\"[email]\"}}"
-      echo "  RBAC ConfigMap updated"
+      # ConfigMap 생성 또는 업데이트 (patch는 기존 리소스 필요, apply는 없으면 생성)
+      kubectl create configmap argocd-rbac-cm -n argocd \
+        --from-literal="policy.csv=$policy" \
+        --from-literal="policy.default=role:none" \
+        --from-literal="scopes=[email]" \
+        --dry-run=client -o yaml | kubectl apply -f -
+      echo "  RBAC ConfigMap applied"
       break
     fi
   fi
