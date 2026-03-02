@@ -3,8 +3,9 @@ set -euo pipefail
 
 # AWS 자격증명 부트스트랩 (유일한 수동 secret)
 #
-# ESO, cert-manager(DNS-01), DDNS(Route53), ECR-creds 모두 같은 AWS 자격증명 사용.
+# ESO, cert-manager(DNS-01), ECR-creds 모두 같은 AWS 자격증명 사용.
 # 각 네임스페이스에 secret을 생성함.
+# (DDNS는 Cloudflare로 마이그레이션, ESO ExternalSecret으로 관리)
 #
 # Usage:
 #   ./scripts/eso/bootstrap-aws.sh
@@ -14,7 +15,6 @@ set -euo pipefail
 SECRETS_LIST=(
   "external-secrets:eso-aws-credentials"
   "cert-manager:route53-credentials"
-  "infra:route53-ddns-credentials"
   "infra:ecr-aws-credentials"
 )
 

@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: ./scripts/ddns/update-now.sh
 
 NAMESPACE="${DDNS_NAMESPACE:-infra}"
-CRONJOB_NAME="ddns-route53-5m-updater"
+CRONJOB_NAME="ddns-cloudflare-updater"
 
 echo "=== DDNS Manual Update ==="
 
