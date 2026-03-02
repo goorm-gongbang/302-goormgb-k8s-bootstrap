@@ -137,7 +137,7 @@ spec:
             externalIPs:
               - ${EXTERNAL_IP}
           hpaSpec:
-            minReplicas: 1
+            minReplicas: 2
             maxReplicas: 3
   values:
     gateways:
