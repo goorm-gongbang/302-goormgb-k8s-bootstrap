@@ -137,8 +137,8 @@ spec:
             externalIPs:
               - ${EXTERNAL_IP}
           hpaSpec:
-            minReplicas: 2
-            maxReplicas: 3
+            minReplicas: 1
+            maxReplicas: 2
   values:
     gateways:
       istio-ingressgateway:
