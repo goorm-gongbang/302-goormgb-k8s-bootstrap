@@ -79,6 +79,19 @@ fi
 
 helm "${HELM_ARGS[@]}" --wait --timeout=5m
 
+# Calico 리소스 health check 설정 (Helm --set으로 Lua 스크립트 전달 시 특수문자 문제 발생)
+echo "Applying Calico health checks to argocd-cm..."
+kubectl patch cm argocd-cm -n argocd --type merge -p '{
+  "data": {
+    "resource.customizations.health.operator.tigera.io_Installation": "hs = {}\nif obj.status ~= nil and obj.status.conditions ~= nil then\n  for i, c in ipairs(obj.status.conditions) do\n    if c.type == \"Ready\" and c.status == \"True\" then\n      hs.status = \"Healthy\"\n      return hs\n    end\n  end\nend\nhs.status = \"Progressing\"\nreturn hs",
+    "resource.customizations.health.operator.tigera.io_APIServer": "hs = {}\nif obj.status ~= nil and obj.status.conditions ~= nil then\n  for i, c in ipairs(obj.status.conditions) do\n    if c.type == \"Ready\" and c.status == \"True\" then\n      hs.status = \"Healthy\"\n      return hs\n    end\n  end\nend\nhs.status = \"Progressing\"\nreturn hs"
+  }
+}'
+
+# ArgoCD server 재시작 (ConfigMap 변경 반영)
+kubectl rollout restart deploy/argocd-server -n argocd
+kubectl rollout status deploy/argocd-server -n argocd --timeout=60s
+
 # ArgoCD CRD가 ready인지 확인
 echo "Waiting for ArgoCD CRDs to be ready..."
 for i in {1..30}; do
