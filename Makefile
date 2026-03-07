@@ -1,7 +1,7 @@
 # 302-goormgb-k8s-bootstrap Makefile
 # kubeadm 클러스터 초기 설정을 위한 명령어 모음
 
-.PHONY: help install-all install-calico install-storage install-eso install-cert-manager install-istio install-argocd \
+.PHONY: help install-all install-calico install-calico-legacy install-storage install-eso install-cert-manager install-istio install-argocd \
         deploy-root-app setup-github-ssh setup-etcd-secret wait-sync run-ddns run-ecr-creds clean-apps clean-all fix-port-conflict \
         rbac-create-users ddns-test ddns-update install-prometheus-crds
 
@@ -13,7 +13,8 @@ help:
 	@echo "  make install-all       - 전체 설치 (Calico → Storage → ESO → cert-manager → Istio → ArgoCD → Root App)"
 	@echo ""
 	@echo "개별 설치:"
-	@echo "  make install-calico    - Calico CNI 설치 (kubeadm 필수)"
+	@echo "  make install-calico    - Calico CNI 설치 (Helm, ArgoCD 관리 가능)"
+	@echo "  make install-calico-legacy - Calico CNI 설치 (raw manifest, 레거시)"
 	@echo "  make install-storage   - Local Path Provisioner 설치 (StorageClass)"
 	@echo "  make install-eso       - External Secrets Operator 설치"
 	@echo "  make bootstrap-aws     - AWS credentials 등록 (수동 입력)"
@@ -98,7 +99,11 @@ run-ddns:
 
 # === 개별 설치 ===
 install-calico:
-	@echo "=== Installing Calico CNI ==="
+	@echo "=== Installing Calico CNI (Helm) ==="
+	./scripts/calico/install-helm.sh
+
+install-calico-legacy:
+	@echo "=== Installing Calico CNI (Legacy) ==="
 	./scripts/calico/install.sh
 
 install-storage:
