@@ -55,12 +55,16 @@ helm repo update
 # 이유: Istio Gateway에서 TLS 종료 후 HTTP로 ArgoCD에 연결
 # 구조: Client → HTTPS → Istio Gateway → HTTP → ArgoCD
 # CP 노드에 배치 (nodeSelector + tolerations)
+# ArgoCD 도메인 설정
+ARGOCD_URL="${ARGOCD_URL:-https://argocd.goormgb.space}"
+
 # Helm install with optional webhook secret
 HELM_ARGS=(
   upgrade --install argocd argo/argo-cd
   -n "$NAMESPACE"
   --create-namespace
   --set 'server.extraArgs={--insecure}'
+  --set "configs.cm.url=$ARGOCD_URL"
   --set global.nodeSelector."node-role\.kubernetes\.io/control-plane"=""
   --set global.tolerations[0].key="node-role.kubernetes.io/control-plane"
   --set global.tolerations[0].operator="Exists"

@@ -152,6 +152,8 @@ spec:
     nodeAddressAutodetectionV4:
       cidrs:
       - ${NODE_CIDR}
+  # Felix 메트릭 활성화 (Prometheus 스크래핑용)
+  nodeMetricsPort: 9091
 EOF
 
 # Step 3: APIServer 설치
