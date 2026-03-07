@@ -9,6 +9,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "=== ArgoCD Install ==="
 
+# GitHub Webhook Secret 가져오기 (AWS Secrets Manager에서)
+WEBHOOK_SECRET=""
+if command -v aws &>/dev/null; then
+  WEBHOOK_SECRET=$(aws secretsmanager get-secret-value \
+    --secret-id dev/argocd/webhook-github \
+    --query 'SecretString' --output text 2>/dev/null || echo "")
+fi
+
+if [[ -z "$WEBHOOK_SECRET" ]]; then
+  echo "NOTE: GitHub webhook secret not found in AWS SM (dev/argocd/webhook-github)"
+  echo "      Webhook will not be configured. To enable:"
+  echo "      1. Generate: openssl rand -hex 20"
+  echo "      2. Store: aws secretsmanager create-secret --name dev/argocd/webhook-github --secret-string '<secret>'"
+  echo ""
+fi
+
 # 기존 ArgoCD CRD가 terminating 상태면 완전히 삭제될 때까지 대기
 if kubectl get crd applications.argoproj.io &>/dev/null; then
   status=$(kubectl get crd applications.argoproj.io -o jsonpath='{.metadata.deletionTimestamp}' 2>/dev/null || echo "")
@@ -39,15 +55,25 @@ helm repo update
 # 이유: Istio Gateway에서 TLS 종료 후 HTTP로 ArgoCD에 연결
 # 구조: Client → HTTPS → Istio Gateway → HTTP → ArgoCD
 # CP 노드에 배치 (nodeSelector + tolerations)
-helm upgrade --install argocd argo/argo-cd \
-  -n "$NAMESPACE" \
-  --create-namespace \
-  --set 'server.extraArgs={--insecure}' \
-  --set global.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
-  --set global.tolerations[0].key="node-role.kubernetes.io/control-plane" \
-  --set global.tolerations[0].operator="Exists" \
-  --set global.tolerations[0].effect="NoSchedule" \
-  --wait --timeout=5m
+# Helm install with optional webhook secret
+HELM_ARGS=(
+  upgrade --install argocd argo/argo-cd
+  -n "$NAMESPACE"
+  --create-namespace
+  --set 'server.extraArgs={--insecure}'
+  --set global.nodeSelector."node-role\.kubernetes\.io/control-plane"=""
+  --set global.tolerations[0].key="node-role.kubernetes.io/control-plane"
+  --set global.tolerations[0].operator="Exists"
+  --set global.tolerations[0].effect="NoSchedule"
+)
+
+# Webhook secret 설정 (있는 경우만)
+if [[ -n "$WEBHOOK_SECRET" ]]; then
+  echo "GitHub webhook secret found, configuring..."
+  HELM_ARGS+=(--set "configs.secret.extra.webhook\.github\.secret=$WEBHOOK_SECRET")
+fi
+
+helm "${HELM_ARGS[@]}" --wait --timeout=5m
 
 # ArgoCD CRD가 ready인지 확인
 echo "Waiting for ArgoCD CRDs to be ready..."
@@ -162,3 +188,18 @@ echo "=== ArgoCD Installed ==="
 echo ""
 echo "Initial admin password:"
 echo "  kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo"
+echo ""
+
+# Webhook 설정 안내
+if [[ -n "$WEBHOOK_SECRET" ]]; then
+  echo "GitHub Webhook configured!"
+  echo "  Add webhook in GitHub repo settings:"
+  echo "  - URL: https://argocd.goormgb.space/api/webhook"
+  echo "  - Content-Type: application/json"
+  echo "  - Secret: (stored in AWS SM: dev/argocd/webhook-github)"
+  echo "  - Events: Just the push event"
+else
+  echo "GitHub Webhook not configured."
+  echo "  To enable, store secret in AWS SM and re-run install:"
+  echo "  aws secretsmanager create-secret --name dev/argocd/webhook-github --secret-string \"\$(openssl rand -hex 20)\""
+fi
