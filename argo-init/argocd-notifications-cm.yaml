@@ -25,7 +25,18 @@ data:
       - name: Content-Type
         value: application/json
 
-  # 템플릿: 배포 성공
+  # 기본 구독 설정 (defaultTriggers가 적용된 앱들에 알림 전송)
+  # 중요: 'discord'가 아닌 'webhook:discord'를 사용해야 함
+  subscriptions: |
+    - recipients:
+        - webhook:discord
+      triggers:
+        - on-sync-running
+        - on-deployed
+        - on-deploy-failed
+        - on-health-degraded
+
+  # 템플릿: 배포 성공 (toJson으로 JSON 인젝션 방지)
   template.app-deployed: |
     webhook:
       discord:
@@ -33,14 +44,14 @@ data:
         body: |
           {
             "embeds": [{
-              "title": "✅ 배포 성공",
-              "description": "**{{.app.metadata.name}}** 배포 완료\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/{{.app.metadata.name}})",
+              "title": {{ printf "✅ %s 배포 성공" .app.metadata.name | toJson }},
+              "description": {{ printf "**%s** 배포 완료\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/%s)" .app.metadata.name .app.metadata.name | toJson }},
               "color": 3066993,
               "fields": [
-                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
-                {"name": "Revision", "value": "{{.app.status.sync.revision | substr 0 7}}", "inline": true}
+                {"name": "Namespace", "value": {{ .app.spec.destination.namespace | toJson }}, "inline": true},
+                {"name": "Revision", "value": {{ .app.status.sync.revision | substr 0 7 | toJson }}, "inline": true}
               ],
-              "timestamp": "{{.app.status.operationState.finishedAt}}"
+              "timestamp": {{ .app.status.operationState.finishedAt | toJson }}
             }]
           }
 
@@ -52,14 +63,14 @@ data:
         body: |
           {
             "embeds": [{
-              "title": "❌ 배포 실패",
-              "description": "**{{.app.metadata.name}}** 배포 실패\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/{{.app.metadata.name}})",
+              "title": {{ printf "❌ %s 배포 실패" .app.metadata.name | toJson }},
+              "description": {{ printf "**%s** 배포 실패\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/%s)" .app.metadata.name .app.metadata.name | toJson }},
               "color": 15158332,
               "fields": [
-                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
-                {"name": "Error", "value": "```{{.app.status.operationState.message | substr 0 500}}```", "inline": false}
+                {"name": "Namespace", "value": {{ .app.spec.destination.namespace | toJson }}, "inline": true},
+                {"name": "Error", "value": {{ .app.status.operationState.message | substr 0 500 | toJson }}, "inline": false}
               ],
-              "timestamp": "{{.app.status.operationState.finishedAt}}"
+              "timestamp": {{ .app.status.operationState.finishedAt | toJson }}
             }]
           }
 
@@ -71,11 +82,11 @@ data:
         body: |
           {
             "embeds": [{
-              "title": "🔄 Sync 진행 중",
-              "description": "**{{.app.metadata.name}}** 동기화 시작\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/{{.app.metadata.name}})",
+              "title": {{ printf "🔄 %s Sync 진행 중" .app.metadata.name | toJson }},
+              "description": {{ printf "**%s** 동기화 시작\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/%s)" .app.metadata.name .app.metadata.name | toJson }},
               "color": 16776960,
               "fields": [
-                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true}
+                {"name": "Namespace", "value": {{ .app.spec.destination.namespace | toJson }}, "inline": true}
               ]
             }]
           }
@@ -88,13 +99,13 @@ data:
         body: |
           {
             "embeds": [{
-              "title": "⚠️ Health Degraded",
-              "description": "**{{.app.metadata.name}}** 상태 비정상\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/{{.app.metadata.name}})",
+              "title": {{ printf "⚠️ %s Health Degraded" .app.metadata.name | toJson }},
+              "description": {{ printf "**%s** 상태 비정상\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/%s)" .app.metadata.name .app.metadata.name | toJson }},
               "color": 16744448,
               "fields": [
-                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
-                {"name": "Health", "value": "{{.app.status.health.status}}", "inline": true},
-                {"name": "Message", "value": "{{.app.status.conditions | first | default dict | dig \"message\" \"N/A\" | substr 0 300}}", "inline": false}
+                {"name": "Namespace", "value": {{ .app.spec.destination.namespace | toJson }}, "inline": true},
+                {"name": "Health", "value": {{ .app.status.health.status | toJson }}, "inline": true},
+                {"name": "Message", "value": {{ .app.status.conditions | first | default dict | dig "message" "N/A" | substr 0 300 | toJson }}, "inline": false}
               ]
             }]
           }
@@ -107,14 +118,14 @@ data:
         body: |
           {
             "embeds": [{
-              "title": "✅ 인프라 배포 성공",
-              "description": "**{{.app.metadata.name}}** 배포 완료",
+              "title": {{ printf "✅ %s 인프라 배포 성공" .app.metadata.name | toJson }},
+              "description": {{ printf "**%s** 배포 완료" .app.metadata.name | toJson }},
               "color": 3066993,
               "fields": [
-                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
-                {"name": "Revision", "value": "{{.app.status.sync.revision | substr 0 7}}", "inline": true}
+                {"name": "Namespace", "value": {{ .app.spec.destination.namespace | toJson }}, "inline": true},
+                {"name": "Revision", "value": {{ .app.status.sync.revision | substr 0 7 | toJson }}, "inline": true}
               ],
-              "timestamp": "{{.app.status.operationState.finishedAt}}"
+              "timestamp": {{ .app.status.operationState.finishedAt | toJson }}
             }]
           }
 
@@ -125,15 +136,15 @@ data:
         body: |
           {
             "embeds": [{
-              "title": "❌ 인프라 배포 실패",
-              "description": "**{{.app.metadata.name}}** 배포 실패\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/{{.app.metadata.name}})",
+              "title": {{ printf "❌ %s 인프라 배포 실패" .app.metadata.name | toJson }},
+              "description": {{ printf "**%s** 배포 실패\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/%s)" .app.metadata.name .app.metadata.name | toJson }},
               "color": 15158332,
               "fields": [
-                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
-                {"name": "Phase", "value": "{{.app.status.operationState.phase}}", "inline": true},
-                {"name": "Error", "value": "```{{.app.status.operationState.message | substr 0 500}}```", "inline": false}
+                {"name": "Namespace", "value": {{ .app.spec.destination.namespace | toJson }}, "inline": true},
+                {"name": "Phase", "value": {{ .app.status.operationState.phase | toJson }}, "inline": true},
+                {"name": "Error", "value": {{ .app.status.operationState.message | substr 0 500 | toJson }}, "inline": false}
               ],
-              "timestamp": "{{.app.status.operationState.finishedAt}}"
+              "timestamp": {{ .app.status.operationState.finishedAt | toJson }}
             }]
           }
 
@@ -144,13 +155,13 @@ data:
         body: |
           {
             "embeds": [{
-              "title": "⚠️ 인프라 Health Degraded",
-              "description": "**{{.app.metadata.name}}** 상태 비정상\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/{{.app.metadata.name}})",
+              "title": {{ printf "⚠️ %s 인프라 Health Degraded" .app.metadata.name | toJson }},
+              "description": {{ printf "**%s** 상태 비정상\n[ArgoCD에서 확인](https://argocd.goormgb.space/applications/argocd/%s)" .app.metadata.name .app.metadata.name | toJson }},
               "color": 16744448,
               "fields": [
-                {"name": "Namespace", "value": "{{.app.spec.destination.namespace}}", "inline": true},
-                {"name": "Health", "value": "{{.app.status.health.status}}", "inline": true},
-                {"name": "Message", "value": "{{.app.status.conditions | first | default dict | dig \"message\" \"N/A\" | substr 0 300}}", "inline": false}
+                {"name": "Namespace", "value": {{ .app.spec.destination.namespace | toJson }}, "inline": true},
+                {"name": "Health", "value": {{ .app.status.health.status | toJson }}, "inline": true},
+                {"name": "Message", "value": {{ .app.status.conditions | first | default dict | dig "message" "N/A" | substr 0 300 | toJson }}, "inline": false}
               ]
             }]
           }
@@ -169,7 +180,6 @@ data:
       send: [infra-health-degraded]
 
   # === 앱용 트리거 ===
-  # 트리거 정의
   trigger.on-deployed: |
     - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
       send: [app-deployed]
