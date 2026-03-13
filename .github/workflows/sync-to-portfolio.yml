@@ -19,17 +19,6 @@ jobs:
       - name: Sanitize content
         run: |
           find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.sh" -o -name "Makefile" -o -name "*.md" \) | while read file; do
-            # 도메인
-            sed -i 's/playball\.one/example.com/g' "$file"
-            sed -i 's/goormgb\.space/example.dev/g' "$file"
-
-            # 조직/프로젝트
-            sed -i 's/goorm-gongbang/my-organization/g' "$file"
-            sed -i 's/goormgb-backup/myproject-backup/g' "$file"
-            sed -i 's/goormgb/myproject/g' "$file"
-            sed -i 's/ktcloud_team4_260204/my-team/g' "$file"
-            sed -i 's/ktcloud-team4-260204/my-team/g' "$file"
-
             # AWS 계정 ID
             sed -i 's/497012402578/123456789012/g' "$file"
             sed -i 's/274130523831/987654321098/g' "$file"
