@@ -70,6 +70,15 @@ jobs:
             sed -i 's/niceguy6112@gmail\.com/viewer8@example.com/g' "$file"
           done
 
+      - name: Clean unnecessary files
+        run: |
+          # OS/IDE 파일
+          find . -name ".DS_Store" -delete
+          find . -name "*.swp" -delete
+          find . -name "*.tmp" -delete
+          find . -name "*.bak" -delete
+          find . -name "*.log" -delete
+
       - name: Push to portfolio repo
         run: |
           git clone https://x-access-token:${{ secrets.PORTFOLIO_TOKEN }}@github.com/${{ env.PORTFOLIO_REPO }}.git portfolio
