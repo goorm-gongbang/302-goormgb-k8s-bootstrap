@@ -47,22 +47,31 @@ helm repo update
 # namespace
 kubectl create namespace external-secrets --dry-run=client -o yaml | kubectl apply -f -
 
-# ESO 설치 (IRSA 사용)
-# IRSA role ARN은 terraform output에서 확인
-IRSA_ROLE_ARN=$(kubectl get sa -n kube-system ebs-csi-controller-sa -o jsonpath='{.metadata.annotations.eks\.amazonaws\.io/role-arn}' 2>/dev/null | sed 's/ebs-csi-driver/external-secrets/' || echo "")
+# ESO IRSA role ARN (환경변수 또는 자동 감지)
+ESO_IRSA_ROLE_ARN="${ESO_IRSA_ROLE_ARN:-}"
 
-if [[ -z "$IRSA_ROLE_ARN" ]]; then
-  echo "NOTE: IRSA role ARN not detected, using default service account"
-  echo "  If External Secrets fails, check terraform output for external_secrets_irsa_role_arn"
+if [[ -z "$ESO_IRSA_ROLE_ARN" ]]; then
+  echo "NOTE: ESO_IRSA_ROLE_ARN not set."
+  echo "  Set it manually or run: export ESO_IRSA_ROLE_ARN=\$(terraform output -raw external_secrets_irsa_role_arn)"
+  echo "  Continuing without IRSA - ClusterSecretStore may fail"
 fi
 
-helm upgrade --install external-secrets \
-  external-secrets/external-secrets \
-  -n external-secrets \
-  --set installCRDs=true \
-  --set serviceAccount.create=true \
-  --set serviceAccount.name=external-secrets \
-  --wait --timeout=5m
+# ESO 설치 (IRSA 사용)
+HELM_ARGS=(
+  upgrade --install external-secrets
+  external-secrets/external-secrets
+  -n external-secrets
+  --set installCRDs=true
+  --set serviceAccount.create=true
+  --set serviceAccount.name=external-secrets
+)
+
+if [[ -n "$ESO_IRSA_ROLE_ARN" ]]; then
+  echo "Using IRSA: $ESO_IRSA_ROLE_ARN"
+  HELM_ARGS+=(--set "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=$ESO_IRSA_ROLE_ARN")
+fi
+
+helm "${HELM_ARGS[@]}" --wait --timeout=5m
 
 # CRD 대기
 echo "Waiting for CRDs..."
@@ -116,10 +125,6 @@ echo ""
 #############################################
 echo "=== Installing Karpenter ==="
 
-# helm repo
-helm repo add karpenter https://charts.karpenter.sh 2>/dev/null || true
-helm repo update
-
 # namespace
 kubectl create namespace karpenter --dry-run=client -o yaml | kubectl apply -f -
 
@@ -140,9 +145,9 @@ if [[ -z "$KARPENTER_QUEUE_NAME" ]]; then
   echo "  Set it manually or run: export KARPENTER_QUEUE_NAME=\$(terraform output -raw karpenter_queue_name)"
 fi
 
-# Karpenter 설치 (IRSA 사용)
+# Karpenter 설치 (OCI registry, IRSA 사용)
 if [[ -n "$KARPENTER_ROLE_ARN" && -n "$KARPENTER_QUEUE_NAME" ]]; then
-  helm upgrade --install karpenter karpenter/karpenter \
+  helm upgrade --install karpenter oci://public.ecr.aws/karpenter/karpenter \
     -n karpenter \
     --version "$KARPENTER_VERSION" \
     --set "settings.clusterName=$CLUSTER_NAME" \
