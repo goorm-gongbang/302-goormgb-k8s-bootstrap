@@ -1,0 +1,69 @@
+# NodePool - Karpenter 노드 프로비저닝 정책
+#
+# Staging 환경: SPOT 우선, ON_DEMAND fallback
+#
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: default
+spec:
+  # EC2NodeClass 참조
+  template:
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+
+      # 인스턴스 요구사항
+      requirements:
+        # 아키텍처: ARM64 (비용 효율적)
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+
+        # 인스턴스 타입 카테고리
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values: ["t", "m", "c", "r"]
+
+        # 인스턴스 세대 (최신)
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          values: ["4"]
+
+        # 인스턴스 사이즈
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["medium", "large", "xlarge"]
+
+        # 용량 타입: SPOT 우선
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+
+        # AZ
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: ["ap-northeast-2a", "ap-northeast-2c"]
+
+      # 노드 만료 시간 (드리프트/업데이트용)
+      expireAfter: 720h  # 30일
+
+  # 스케일링 제한
+  limits:
+    cpu: 100        # 최대 100 vCPU
+    memory: 200Gi   # 최대 200GB 메모리
+
+  # 노드 통합 (비용 최적화)
+  disruption:
+    # 빈 노드 정리
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 1m
+
+    # Spot 중단 시 처리
+    budgets:
+      - nodes: "10%"  # 한번에 최대 10% 노드만 중단 가능
+
+  # 가중치 (다른 NodePool이 있을 때 우선순위)
+  weight: 100

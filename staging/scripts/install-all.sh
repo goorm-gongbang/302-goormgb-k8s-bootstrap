@@ -112,7 +112,84 @@ done
 echo ""
 
 #############################################
-# 3. ArgoCD
+# 3. Karpenter (Node Auto Provisioning)
+#############################################
+echo "=== Installing Karpenter ==="
+
+# helm repo
+helm repo add karpenter https://charts.karpenter.sh 2>/dev/null || true
+helm repo update
+
+# namespace
+kubectl create namespace karpenter --dry-run=client -o yaml | kubectl apply -f -
+
+# Karpenter 설정 (환경변수로 오버라이드 가능)
+KARPENTER_VERSION="${KARPENTER_VERSION:-1.0.8}"
+CLUSTER_NAME="${CLUSTER_NAME:-$(kubectl config current-context | cut -d'/' -f2)}"
+KARPENTER_ROLE_ARN="${KARPENTER_ROLE_ARN:-}"
+KARPENTER_QUEUE_NAME="${KARPENTER_QUEUE_NAME:-}"
+
+# terraform output에서 값 가져오기 시도
+if [[ -z "$KARPENTER_ROLE_ARN" ]]; then
+  echo "NOTE: KARPENTER_ROLE_ARN not set."
+  echo "  Set it manually or run: export KARPENTER_ROLE_ARN=\$(terraform output -raw karpenter_irsa_role_arn)"
+fi
+
+if [[ -z "$KARPENTER_QUEUE_NAME" ]]; then
+  echo "NOTE: KARPENTER_QUEUE_NAME not set."
+  echo "  Set it manually or run: export KARPENTER_QUEUE_NAME=\$(terraform output -raw karpenter_queue_name)"
+fi
+
+# Karpenter 설치 (IRSA 사용)
+if [[ -n "$KARPENTER_ROLE_ARN" && -n "$KARPENTER_QUEUE_NAME" ]]; then
+  helm upgrade --install karpenter karpenter/karpenter \
+    -n karpenter \
+    --version "$KARPENTER_VERSION" \
+    --set "settings.clusterName=$CLUSTER_NAME" \
+    --set "settings.interruptionQueue=$KARPENTER_QUEUE_NAME" \
+    --set "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=$KARPENTER_ROLE_ARN" \
+    --set controller.resources.requests.cpu=100m \
+    --set controller.resources.requests.memory=256Mi \
+    --set controller.resources.limits.cpu=500m \
+    --set controller.resources.limits.memory=512Mi \
+    --wait --timeout=5m
+
+  echo "Karpenter installed."
+
+  # Karpenter CRD 대기
+  echo "Waiting for Karpenter CRDs..."
+  kubectl wait --for condition=established --timeout=60s \
+    crd/nodepools.karpenter.sh \
+    crd/ec2nodeclasses.karpenter.k8s.aws 2>/dev/null || true
+
+  # NodePool 및 EC2NodeClass 배포
+  KARPENTER_NODE_ROLE="${KARPENTER_NODE_ROLE:-}"
+  if [[ -z "$KARPENTER_NODE_ROLE" ]]; then
+    echo "NOTE: KARPENTER_NODE_ROLE not set."
+    echo "  Set it manually or run: export KARPENTER_NODE_ROLE=\$(terraform output -raw karpenter_node_role_name)"
+  fi
+
+  if [[ -f "$STAGING_DIR/karpenter/nodepool.yaml" && -n "$KARPENTER_NODE_ROLE" ]]; then
+    echo "Deploying Karpenter NodePool and EC2NodeClass..."
+    # 환경변수 치환 후 적용
+    export CLUSTER_NAME KARPENTER_NODE_ROLE
+    for f in "$STAGING_DIR/karpenter/"*.yaml; do
+      envsubst < "$f" | kubectl apply -f -
+    done
+    echo "Karpenter NodePool deployed."
+  else
+    echo "NOTE: Karpenter manifests not deployed."
+    echo "  Missing: KARPENTER_NODE_ROLE or manifests at $STAGING_DIR/karpenter/"
+  fi
+else
+  echo "SKIPPING Karpenter installation - missing required environment variables"
+  echo "  Required: KARPENTER_ROLE_ARN, KARPENTER_QUEUE_NAME"
+fi
+
+echo ""
+
+#############################################
+# 4. ArgoCD
 #############################################
 echo "=== Installing ArgoCD ==="
 
@@ -155,7 +232,7 @@ echo "ArgoCD installed."
 echo ""
 
 #############################################
-# 4. GitHub SSH Key (ExternalSecret)
+# 5. GitHub SSH Key (ExternalSecret)
 #############################################
 echo "=== Setting up GitHub SSH Key ==="
 
@@ -191,7 +268,7 @@ fi
 echo ""
 
 #############################################
-# 5. Root Application
+# 6. Root Application
 #############################################
 echo "=== Deploying Root Application ==="
 
