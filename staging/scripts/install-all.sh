@@ -186,6 +186,30 @@ helm repo update
 # namespace
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 
+# Values 파일 다운로드 (303-goormgb-k8s-helm 레포)
+HELM_VALUES_URL="https://raw.githubusercontent.com/goorm-gongbang/303-goormgb-k8s-helm/argocd-sync/staging/staging/values/core/values-argocd-install.yaml"
+ARGOCD_VALUES_FILE="/tmp/argocd-values.yaml"
+
+echo "Downloading ArgoCD values from helm repo..."
+if curl -sSfL "$HELM_VALUES_URL" -o "$ARGOCD_VALUES_FILE"; then
+  echo "  Values file downloaded"
+else
+  echo "  WARNING: Could not download values file, using defaults"
+  cat > "$ARGOCD_VALUES_FILE" << 'VALUESEOF'
+server:
+  extraArgs:
+    - --insecure
+  service:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: nlb
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+configs:
+  cm:
+    url: https://argocd.staging.playball.one
+VALUESEOF
+fi
+
 # Webhook secret (optional)
 WEBHOOK_SECRET=""
 if command -v aws &>/dev/null; then
@@ -194,13 +218,12 @@ if command -v aws &>/dev/null; then
     --query 'SecretString' --output text 2>/dev/null || echo "")
 fi
 
-# ArgoCD 설치
+# ArgoCD 설치 (values 파일 사용)
 HELM_ARGS=(
   upgrade --install argocd argo/argo-cd
   -n argocd
   --create-namespace
-  --set 'server.extraArgs={--insecure}'
-  --set "configs.cm.url=$ARGOCD_URL"
+  -f "$ARGOCD_VALUES_FILE"
 )
 
 if [[ -n "$WEBHOOK_SECRET" ]]; then
@@ -209,6 +232,8 @@ if [[ -n "$WEBHOOK_SECRET" ]]; then
 fi
 
 helm "${HELM_ARGS[@]}" --wait --timeout=5m
+
+rm -f "$ARGOCD_VALUES_FILE"
 
 # ArgoCD CRD 대기
 echo "Waiting for ArgoCD CRDs..."
