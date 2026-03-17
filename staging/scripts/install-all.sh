@@ -129,11 +129,10 @@ echo "=== Installing Karpenter ==="
 kubectl create namespace karpenter --dry-run=client -o yaml | kubectl apply -f -
 
 # Karpenter 설정 (환경변수로 오버라이드 가능)
-KARPENTER_VERSION="${KARPENTER_VERSION:-1.0.8}"
+KARPENTER_VERSION="${KARPENTER_VERSION:-1.1.1}"
 CLUSTER_NAME="${CLUSTER_NAME:-$(kubectl config current-context | cut -d'/' -f2)}"
 KARPENTER_ROLE_ARN="${KARPENTER_ROLE_ARN:-}"
 KARPENTER_QUEUE_NAME="${KARPENTER_QUEUE_NAME:-}"
-ECR_REGISTRY="${ECR_REGISTRY:-497012402578.dkr.ecr.ap-northeast-2.amazonaws.com}"
 
 # terraform output에서 값 가져오기 시도
 if [[ -z "$KARPENTER_ROLE_ARN" ]]; then
@@ -146,13 +145,13 @@ if [[ -z "$KARPENTER_QUEUE_NAME" ]]; then
   echo "  Set it manually or run: export KARPENTER_QUEUE_NAME=\$(terraform output -raw karpenter_queue_name)"
 fi
 
-# Karpenter 설치 (Private ECR, IRSA 사용)
+# Karpenter 설치 (Public ECR 사용)
 if [[ -n "$KARPENTER_ROLE_ARN" && -n "$KARPENTER_QUEUE_NAME" ]]; then
-  # ECR 로그인
-  aws ecr get-login-password --region ap-northeast-2 | \
-    helm registry login --username AWS --password-stdin "$ECR_REGISTRY"
+  # Public ECR 로그인
+  aws ecr-public get-login-password --region us-east-1 | \
+    helm registry login --username AWS --password-stdin public.ecr.aws
 
-  helm upgrade --install karpenter "oci://${ECR_REGISTRY}/helm/karpenter" \
+  helm upgrade --install karpenter "oci://public.ecr.aws/karpenter/karpenter" \
     -n karpenter \
     --version "$KARPENTER_VERSION" \
     --set "settings.clusterName=$CLUSTER_NAME" \
