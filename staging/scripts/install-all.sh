@@ -278,7 +278,38 @@ fi
 echo ""
 
 #############################################
-# 6. Root Application
+# 6. ArgoCD RBAC ConfigMap (ESO → ConfigMap)
+#############################################
+echo "=== Setting up ArgoCD RBAC ==="
+
+# ESO가 생성한 RBAC Secret 대기
+echo "Waiting for argocd-rbac-eso secret..."
+for i in {1..30}; do
+  if kubectl get secret argocd-rbac-eso -n argocd &>/dev/null; then
+    policy=$(kubectl get secret argocd-rbac-eso -n argocd -o jsonpath='{.data.policy_csv}' 2>/dev/null | base64 -d || echo "")
+    if [[ -n "$policy" ]]; then
+      echo "  RBAC secret ready"
+      # ConfigMap 생성/업데이트 (ArgoCD가 읽는 형식)
+      kubectl create configmap argocd-rbac-cm -n argocd \
+        --from-literal="policy.csv=$policy" \
+        --from-literal="policy.default=role:none" \
+        --from-literal="scopes=[email]" \
+        --dry-run=client -o yaml | kubectl apply -f -
+      echo "  RBAC ConfigMap applied"
+      # ArgoCD server 재시작
+      kubectl rollout restart deployment argocd-server -n argocd
+      kubectl rollout status deployment argocd-server -n argocd --timeout=60s
+      break
+    fi
+  fi
+  echo "  Waiting... ($i/30)"
+  sleep 2
+done
+
+echo ""
+
+#############################################
+# 7. Root Application
 #############################################
 echo "=== Deploying Root Application ==="
 
