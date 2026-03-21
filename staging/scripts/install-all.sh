@@ -47,12 +47,18 @@ helm repo update
 # namespace
 kubectl create namespace external-secrets --dry-run=client -o yaml | kubectl apply -f -
 
-# ESO IRSA role ARN (환경변수 또는 자동 감지)
+# ESO IRSA role ARN (환경변수 또는 terraform에서 자동 감지)
 ESO_IRSA_ROLE_ARN="${ESO_IRSA_ROLE_ARN:-}"
+TERRAFORM_DIR="${TERRAFORM_DIR:-$HOME/Documents/GitHub/301-goormgb-terraform/environments/staging}"
+
+if [[ -z "$ESO_IRSA_ROLE_ARN" ]] && [[ -d "$TERRAFORM_DIR" ]]; then
+  echo "Detecting ESO IRSA role ARN from terraform..."
+  ESO_IRSA_ROLE_ARN=$(cd "$TERRAFORM_DIR" && terraform output -raw eks_external_secrets_irsa_role_arn 2>/dev/null || echo "")
+fi
 
 if [[ -z "$ESO_IRSA_ROLE_ARN" ]]; then
-  echo "NOTE: ESO_IRSA_ROLE_ARN not set."
-  echo "  Set it manually or run: export ESO_IRSA_ROLE_ARN=\$(terraform output -raw eks_external_secrets_irsa_role_arn)"
+  echo "WARNING: ESO_IRSA_ROLE_ARN not set and could not auto-detect."
+  echo "  Set it manually: export ESO_IRSA_ROLE_ARN=<role-arn>"
   echo "  Continuing without IRSA - ClusterSecretStore may fail"
 fi
 
