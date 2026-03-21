@@ -288,6 +288,9 @@ echo ""
 #############################################
 echo "=== Setting up ArgoCD RBAC ==="
 
+# RBAC ExternalSecret 생성
+kubectl apply -f "$STAGING_DIR/argo-init/external-secret-rbac.yaml"
+
 # ESO가 생성한 RBAC Secret 대기
 echo "Waiting for argocd-rbac-eso secret..."
 for i in {1..30}; do
