@@ -192,7 +192,7 @@ helm repo update
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 
 # Values 파일 다운로드 (303-goormgb-k8s-helm 레포)
-HELM_VALUES_URL="https://raw.githubusercontent.com/goorm-gongbang/303-goormgb-k8s-helm/argocd-sync/staging/staging/values/core/values-argocd-install.yaml"
+HELM_VALUES_URL="https://raw.githubusercontent.com/goorm-gongbang/303-goormgb-k8s-helm/main/staging/values/core/values-argocd-install.yaml"
 ARGOCD_VALUES_FILE="/tmp/argocd-values.yaml"
 
 echo "Downloading ArgoCD values from helm repo..."
