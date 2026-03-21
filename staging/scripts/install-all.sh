@@ -52,7 +52,7 @@ ESO_IRSA_ROLE_ARN="${ESO_IRSA_ROLE_ARN:-}"
 
 if [[ -z "$ESO_IRSA_ROLE_ARN" ]]; then
   echo "NOTE: ESO_IRSA_ROLE_ARN not set."
-  echo "  Set it manually or run: export ESO_IRSA_ROLE_ARN=\$(terraform output -raw external_secrets_irsa_role_arn)"
+  echo "  Set it manually or run: export ESO_IRSA_ROLE_ARN=\$(terraform output -raw eks_external_secrets_irsa_role_arn)"
   echo "  Continuing without IRSA - ClusterSecretStore may fail"
 fi
 
