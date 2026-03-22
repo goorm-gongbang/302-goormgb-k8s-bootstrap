@@ -291,29 +291,57 @@ echo "=== Setting up ArgoCD RBAC ==="
 # RBAC ExternalSecret 생성
 kubectl apply -f "$STAGING_DIR/argo-init/external-secret-rbac.yaml"
 
+# ExternalSecret 강제 새로고침
+kubectl annotate externalsecret argocd-rbac-eso -n argocd \
+  force-sync="$(date +%s)" --overwrite 2>/dev/null || true
+
 # ESO가 생성한 RBAC Secret 대기
 echo "Waiting for argocd-rbac-eso secret..."
+RBAC_SYNCED=false
 for i in {1..30}; do
   if kubectl get secret argocd-rbac-eso -n argocd &>/dev/null; then
     policy=$(kubectl get secret argocd-rbac-eso -n argocd -o jsonpath='{.data.policy_csv}' 2>/dev/null | base64 -d || echo "")
     if [[ -n "$policy" ]]; then
       echo "  RBAC secret ready"
-      # ConfigMap 생성/업데이트 (ArgoCD가 읽는 형식)
-      kubectl create configmap argocd-rbac-cm -n argocd \
-        --from-literal="policy.csv=$policy" \
-        --from-literal="policy.default=role:none" \
-        --from-literal="scopes=[email]" \
-        --dry-run=client -o yaml | kubectl apply -f -
-      echo "  RBAC ConfigMap applied"
-      # ArgoCD server 재시작
-      kubectl rollout restart deployment argocd-server -n argocd
-      kubectl rollout status deployment argocd-server -n argocd --timeout=60s
+      RBAC_SYNCED=true
       break
     fi
   fi
   echo "  Waiting... ($i/30)"
   sleep 2
 done
+
+# RBAC ConfigMap 적용
+if [[ "$RBAC_SYNCED" == "true" ]]; then
+  echo "Applying RBAC ConfigMap..."
+  echo "  Policy:"
+  echo "$policy" | sed 's/^/    /'
+
+  # ConfigMap 생성/업데이트 (ArgoCD가 읽는 형식)
+  kubectl create configmap argocd-rbac-cm -n argocd \
+    --from-literal="policy.csv=$policy" \
+    --from-literal="policy.default=role:none" \
+    --from-literal="scopes=[email]" \
+    --dry-run=client -o yaml | kubectl apply -f -
+
+  # ConfigMap 라벨 추가 (ArgoCD가 인식하도록)
+  kubectl label configmap argocd-rbac-cm -n argocd \
+    app.kubernetes.io/name=argocd-rbac-cm \
+    app.kubernetes.io/part-of=argocd \
+    --overwrite
+
+  echo "  RBAC ConfigMap applied"
+
+  # ArgoCD server 재시작
+  echo "Restarting ArgoCD server to apply RBAC..."
+  kubectl rollout restart deployment argocd-server -n argocd
+  kubectl rollout status deployment argocd-server -n argocd --timeout=60s
+
+  echo "  RBAC setup complete"
+else
+  echo "WARNING: RBAC secret not synced within timeout"
+  echo "  Run manually after install: ./staging/scripts/sync-rbac.sh"
+fi
 
 echo ""
 
