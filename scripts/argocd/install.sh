@@ -65,9 +65,10 @@ HELM_ARGS=(
   --create-namespace
   --set 'server.extraArgs={--insecure}'
   --set "configs.cm.url=$ARGOCD_URL"
-  --set global.nodeSelector."node-role\.kubernetes\.io/control-plane"=""
-  --set global.tolerations[0].key="node-role.kubernetes.io/control-plane"
-  --set global.tolerations[0].operator="Exists"
+  --set global.nodeSelector.role=infra
+  --set global.tolerations[0].key="role"
+  --set global.tolerations[0].value="infra"
+  --set global.tolerations[0].operator="Equal"
   --set global.tolerations[0].effect="NoSchedule"
 )
 
