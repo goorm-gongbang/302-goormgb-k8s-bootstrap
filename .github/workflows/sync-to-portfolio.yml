@@ -1,0 +1,92 @@
+name: Sync to Portfolio
+
+on:
+  push:
+    branches:
+      - sanitizer
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sanitize sensitive data
+        run: |
+          # AWS Account IDs
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" -o -name "Makefile" \) \
+            -exec sed -i 's/497012402578/123456789012/g' {} \;
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" -o -name "Makefile" \) \
+            -exec sed -i 's/274130523831/987654321098/g' {} \;
+
+          # Route53 Zone ID
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" -o -name "Makefile" \) \
+            -exec sed -i 's/Z0444756O5UQIM83AJHO/ZEXAMPLEZONEID/g' {} \;
+
+          # Public IPs
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" -o -name "Makefile" \) \
+            -exec sed -i 's/122\.34\.166\.131/10.0.0.1/g' {} \;
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" -o -name "Makefile" \) \
+            -exec sed -i 's/39\.119\.192\.15/10.0.0.2/g' {} \;
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" -o -name "Makefile" \) \
+            -exec sed -i 's/118\.221\.42\.243/10.0.0.3/g' {} \;
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" -o -name "Makefile" \) \
+            -exec sed -i 's/121\.183\.205\.167/10.0.0.4/g' {} \;
+
+          # Private IPs
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" -o -name "Makefile" \) \
+            -exec sed -i 's/192\.168\.45\.123/10.0.0.10/g' {} \;
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" -o -name "Makefile" \) \
+            -exec sed -i 's/192\.168\.45\.154/10.0.0.11/g' {} \;
+
+          # Node names
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" -o -name "Makefile" \) \
+            -exec sed -i 's/mini-might/worker-node-1/g' {} \;
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" -o -name "Makefile" \) \
+            -exec sed -i 's/mini-gmk/control-plane-1/g' {} \;
+
+          # Team member emails -> generic
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" \) \
+            -exec sed -i 's/212clab@gmail\.com/admin@example.com/g' {} \;
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" \) \
+            -exec sed -i 's/rhuba23@gmail\.com/editor1@example.com/g' {} \;
+          find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" \) \
+            -exec sed -i 's/chamchi0129@gmail\.com/editor2@example.com/g' {} \;
+
+          # Delete files that shouldn't be public
+          rm -rf .terraform/ || true
+          find . -name "*.tfstate*" -delete || true
+          find . -name "terraform.tfvars" -delete || true
+          find . -name ".terraform.lock.hcl" -delete || true
+          find . -name "*.tgz" -delete || true
+          find . -name "Chart.lock" -delete || true
+          find . -name ".DS_Store" -delete || true
+          find . -name "*.swp" -delete || true
+          find . -name "*.tmp" -delete || true
+          find . -name "*.bak" -delete || true
+
+      - name: Push to portfolio repo
+        env:
+          PORTFOLIO_TOKEN: ${{ secrets.PORTFOLIO_TOKEN }}
+        run: |
+          # Remove .git and reinitialize
+          rm -rf .git
+          git init -b main
+
+          # Set git config AFTER git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add .
+          git commit -m "Sync from 302-goormgb-k8s-bootstrap"
+
+          # Push to portfolio repo subdirectory
+          git remote add portfolio https://x-access-token:${PORTFOLIO_TOKEN}@github.com/techupgrgbcn-crypto/playball-infra.git
+          git fetch portfolio main || true
+
+          # Use subtree to push to k8s-bootstrap directory
+          git push portfolio HEAD:refs/heads/bootstrap-sync --force
