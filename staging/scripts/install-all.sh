@@ -205,10 +205,7 @@ server:
   extraArgs:
     - --insecure
   service:
-    type: LoadBalancer
-    annotations:
-      service.beta.kubernetes.io/aws-load-balancer-type: nlb
-      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    type: ClusterIP
 configs:
   cm:
     url: https://argocd.staging.playball.one
