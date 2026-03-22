@@ -14,9 +14,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          path: source
 
-      - name: Sanitize sensitive data
+      - name: Checkout portfolio repo
+        uses: actions/checkout@v4
+        with:
+          repository: techupgrgbcn-crypto/playball-infra
+          token: ${{ secrets.PORTFOLIO_TOKEN }}
+          path: portfolio
+
+      - name: Sanitize and copy
         run: |
+          cd source
+
           # AWS Account IDs
           find . -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.sh" -o -name "*.md" -o -name "Makefile" \) \
             -exec sed -i 's/497012402578/123456789012/g' {} \;
@@ -58,7 +68,7 @@ jobs:
             -exec sed -i 's/chamchi0129@gmail\.com/editor2@example.com/g' {} \;
 
           # Delete files that shouldn't be public
-          rm -rf .terraform/ || true
+          rm -rf .git .github .terraform/ || true
           find . -name "*.tfstate*" -delete || true
           find . -name "terraform.tfvars" -delete || true
           find . -name ".terraform.lock.hcl" -delete || true
@@ -69,24 +79,18 @@ jobs:
           find . -name "*.tmp" -delete || true
           find . -name "*.bak" -delete || true
 
-      - name: Push to portfolio repo
-        env:
-          PORTFOLIO_TOKEN: ${{ secrets.PORTFOLIO_TOKEN }}
-        run: |
-          # Remove .git and reinitialize
-          rm -rf .git
-          git init -b main
+          # Copy to portfolio repo
+          cd ..
+          rm -rf portfolio/k8s-bootstrap
+          mkdir -p portfolio/k8s-bootstrap
+          cp -r source/* portfolio/k8s-bootstrap/
 
-          # Set git config AFTER git init
+      - name: Push to portfolio repo
+        run: |
+          cd portfolio
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add .
-          git commit -m "Sync from 302-goormgb-k8s-bootstrap"
-
-          # Push to portfolio repo subdirectory
-          git remote add portfolio https://x-access-token:${PORTFOLIO_TOKEN}@github.com/techupgrgbcn-crypto/playball-infra.git
-          git fetch portfolio main || true
-
-          # Use subtree to push to k8s-bootstrap directory
-          git push portfolio HEAD:refs/heads/bootstrap-sync --force
+          git diff --staged --quiet || git commit -m "Sync k8s-bootstrap from 302-goormgb-k8s-bootstrap"
+          git push
