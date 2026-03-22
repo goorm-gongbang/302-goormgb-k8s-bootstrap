@@ -73,12 +73,14 @@ jobs:
         env:
           PORTFOLIO_TOKEN: ${{ secrets.PORTFOLIO_TOKEN }}
         run: |
+          # Remove .git and reinitialize
+          rm -rf .git
+          git init -b main
+
+          # Set git config AFTER git init
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Remove .git and reinitialize
-          rm -rf .git
-          git init
           git add .
           git commit -m "Sync from 302-goormgb-k8s-bootstrap"
 
