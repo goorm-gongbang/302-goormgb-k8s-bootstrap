@@ -59,16 +59,16 @@ helm repo update
 ARGOCD_URL="${ARGOCD_URL:-https://argocd.goormgb.space}"
 
 # Helm install with optional webhook secret
+# CP 노드(mini-gmk)에 배치 + control-plane taint 허용
 HELM_ARGS=(
   upgrade --install argocd argo/argo-cd
   -n "$NAMESPACE"
   --create-namespace
   --set 'server.extraArgs={--insecure}'
   --set "configs.cm.url=$ARGOCD_URL"
-  --set global.nodeSelector.role=infra
-  --set global.tolerations[0].key="role"
-  --set global.tolerations[0].value="infra"
-  --set global.tolerations[0].operator="Equal"
+  --set 'global.nodeSelector.kubernetes\.io/hostname=mini-gmk'
+  --set global.tolerations[0].key="node-role.kubernetes.io/control-plane"
+  --set global.tolerations[0].operator="Exists"
   --set global.tolerations[0].effect="NoSchedule"
 )
 
