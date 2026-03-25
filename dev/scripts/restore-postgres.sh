@@ -154,6 +154,42 @@ spec:
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"
           effect: "NoSchedule"
+      initContainers:
+        - name: download
+          image: amazon/aws-cli:latest
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-backup-s3
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-backup-s3
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_DEFAULT_REGION
+              value: ap-northeast-2
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "=== Downloading backup from S3 ==="
+              aws s3 cp s3://${S3_BUCKET}/${S3_PREFIX}/${DATABASE}/${BACKUP_FILE} /backup/restore.sql.gz
+              echo "Download complete."
+              gunzip /backup/restore.sql.gz
+              echo "Extract complete."
+              ls -la /backup/
+          volumeMounts:
+            - name: backup-data
+              mountPath: /backup
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
       containers:
         - name: restore
           image: postgres:16-alpine
@@ -185,26 +221,18 @@ spec:
             - -c
             - |
               set -e
-              apk add --no-cache aws-cli
-
               echo ""
-              echo "=== [1/3] Downloading backup from S3 ==="
-              aws s3 cp s3://${S3_BUCKET}/${S3_PREFIX}/${DATABASE}/${BACKUP_FILE} /tmp/restore.sql.gz
-              echo "Download complete."
-
-              echo ""
-              echo "=== [2/3] Extracting backup file ==="
-              gunzip /tmp/restore.sql.gz
-              echo "Extract complete. Size: \$(du -h /tmp/restore.sql | cut -f1)"
-
-              echo ""
-              echo "=== [3/3] Restoring database ==="
-              psql -h postgresql -U \$POSTGRES_USER -d ${DATABASE} < /tmp/restore.sql
+              echo "=== Restoring database ==="
+              echo "File size: \$(du -h /backup/restore.sql | cut -f1)"
+              psql -h postgresql -U \$POSTGRES_USER -d ${DATABASE} < /backup/restore.sql
 
               echo ""
               echo "=========================================="
               echo "  RESTORE COMPLETE!"
               echo "=========================================="
+          volumeMounts:
+            - name: backup-data
+              mountPath: /backup
           resources:
             requests:
               cpu: 100m
@@ -212,6 +240,9 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+      volumes:
+        - name: backup-data
+          emptyDir: {}
 EOF
 
 echo ""
