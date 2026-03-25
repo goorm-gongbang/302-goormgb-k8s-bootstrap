@@ -177,8 +177,6 @@ spec:
               echo "=== Downloading backup from S3 ==="
               aws s3 cp s3://${S3_BUCKET}/${S3_PREFIX}/${DATABASE}/${BACKUP_FILE} /backup/restore.sql.gz
               echo "Download complete."
-              gunzip /backup/restore.sql.gz
-              echo "Extract complete."
               ls -la /backup/
           volumeMounts:
             - name: backup-data
@@ -222,8 +220,11 @@ spec:
             - |
               set -e
               echo ""
-              echo "=== Restoring database ==="
+              echo "=== Extracting backup ==="
+              gunzip -k /backup/restore.sql.gz
               echo "File size: \$(du -h /backup/restore.sql | cut -f1)"
+              echo ""
+              echo "=== Restoring database ==="
               psql -h postgresql -U \$POSTGRES_USER -d ${DATABASE} < /backup/restore.sql
 
               echo ""
