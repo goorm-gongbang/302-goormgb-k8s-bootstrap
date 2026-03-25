@@ -8,7 +8,7 @@ set -euo pipefail
 # - externalIPs로 외부 접근 설정 (LoadBalancer 없음)
 # - 기본 EXTERNAL_IP=192.168.45.154 (mini-might, worker node)
 
-ISTIO_VERSION="${ISTIO_VERSION:-1.24.2}"
+ISTIO_VERSION="${ISTIO_VERSION:-1.29.1}"
 
 # 80/443 포트 충돌 해결 함수
 fix_port_conflict() {
@@ -67,8 +67,8 @@ if command -v istioctl &>/dev/null; then
   ISTIOCTL="istioctl"
 elif [[ -x "./istio-${ISTIO_VERSION}/bin/istioctl" ]]; then
   ISTIOCTL="./istio-${ISTIO_VERSION}/bin/istioctl"
-elif [[ -x "./istio-1.24.2/bin/istioctl" ]]; then
-  ISTIOCTL="./istio-1.24.2/bin/istioctl"
+elif [[ -x "./istio-1.29.1/bin/istioctl" ]]; then
+  ISTIOCTL="./istio-1.29.1/bin/istioctl"
 fi
 
 if [[ -n "$ISTIOCTL" ]]; then

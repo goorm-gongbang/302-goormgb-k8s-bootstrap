@@ -135,7 +135,7 @@ echo "=== Installing Karpenter ==="
 kubectl create namespace karpenter --dry-run=client -o yaml | kubectl apply -f -
 
 # Karpenter 설정 (환경변수로 오버라이드 가능)
-KARPENTER_VERSION="${KARPENTER_VERSION:-1.1.1}"
+KARPENTER_VERSION="${KARPENTER_VERSION:-1.10.0}"
 CLUSTER_NAME="${CLUSTER_NAME:-$(kubectl config current-context | cut -d'/' -f2)}"
 KARPENTER_ROLE_ARN="${KARPENTER_ROLE_ARN:-}"
 KARPENTER_QUEUE_NAME="${KARPENTER_QUEUE_NAME:-}"

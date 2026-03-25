@@ -4,7 +4,7 @@
 
 set -e
 
-PROMETHEUS_OPERATOR_VERSION="v0.75.1"
+PROMETHEUS_OPERATOR_VERSION="v0.89.0"
 BASE_URL="https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd"
 
 echo "=== Installing Prometheus Operator CRDs (${PROMETHEUS_OPERATOR_VERSION}) ==="

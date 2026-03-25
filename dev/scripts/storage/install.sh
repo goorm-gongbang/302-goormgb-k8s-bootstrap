@@ -5,7 +5,7 @@ set -euo pipefail
 # kubeadm 클러스터용 기본 StorageClass 제공
 # Usage: ./scripts/storage/install.sh
 
-LOCAL_PATH_VERSION="${LOCAL_PATH_VERSION:-v0.0.26}"
+LOCAL_PATH_VERSION="${LOCAL_PATH_VERSION:-v0.0.35}"
 
 echo "=== Installing Local Path Provisioner ==="
 
