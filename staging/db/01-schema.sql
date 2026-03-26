@@ -32,6 +32,7 @@ DROP TABLE IF EXISTS matches CASCADE;
 DROP TABLE IF EXISTS clubs CASCADE;
 DROP TABLE IF EXISTS stadiums CASCADE;
 DROP TABLE IF EXISTS withdrawal_requests CASCADE;
+DROP TABLE IF EXISTS load_test_users CASCADE;
 DROP TABLE IF EXISTS dev_users CASCADE;
 DROP TABLE IF EXISTS user_sns CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
@@ -115,8 +116,8 @@ CREATE TABLE users
 (
     id                      BIGSERIAL PRIMARY KEY,
     status                  VARCHAR(20) NOT NULL DEFAULT 'ACTIVATE',
-    email                   VARCHAR(255),
-    nickname                VARCHAR(100),
+    email                   VARCHAR(512),
+    nickname                VARCHAR(512),
     profile_image_url       VARCHAR(255),
     onboarding_completed    BOOLEAN     NOT NULL DEFAULT false,
     onboarding_completed_at TIMESTAMP,
@@ -156,6 +157,20 @@ CREATE TABLE dev_users
     created_at    TIMESTAMP    NOT NULL,
     updated_at    TIMESTAMP    NOT NULL,
     CONSTRAINT fk_dev_users_user_id FOREIGN KEY (user_id) REFERENCES users (id)
+);
+
+-- ============================================================
+-- load_test_users
+-- ============================================================
+CREATE TABLE load_test_users
+(
+    id            BIGSERIAL PRIMARY KEY,
+    login_id      VARCHAR(50)  NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    user_id       BIGINT       NOT NULL UNIQUE,
+    created_at    TIMESTAMP    NOT NULL,
+    updated_at    TIMESTAMP    NOT NULL,
+    CONSTRAINT fk_load_test_users_user_id FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
 -- ============================================================
@@ -277,6 +292,7 @@ CREATE TABLE blocks
     area_id         BIGINT      NOT NULL,
     section_id      BIGINT      NOT NULL,
     block_code      VARCHAR(20) NOT NULL,
+    block_num       BIGINT      NOT NULL UNIQUE,
     viewpoint       VARCHAR(30) NOT NULL,
     home_cheer_rank INTEGER,
     away_cheer_rank INTEGER,
@@ -392,10 +408,10 @@ CREATE TABLE orders
     cancellation_fee   INTEGER     NOT NULL,
     refunded_amount    INTEGER,
     cancelled_at       TIMESTAMP,
-    orderer_name       VARCHAR(50)  NOT NULL,
-    orderer_email      VARCHAR(255) NOT NULL,
-    orderer_phone      VARCHAR(20)  NOT NULL,
-    orderer_birth_date VARCHAR(6)   NOT NULL,
+    orderer_name       VARCHAR(512) NOT NULL,
+    orderer_email      VARCHAR(512) NOT NULL,
+    orderer_phone      VARCHAR(512) NOT NULL,
+    orderer_birth_date VARCHAR(512) NOT NULL,
     created_at         TIMESTAMP   NOT NULL,
     updated_at         TIMESTAMP   NOT NULL,
     CONSTRAINT fk_orders_user_id FOREIGN KEY (user_id) REFERENCES users (id),
@@ -441,8 +457,8 @@ CREATE TABLE payments
     status           VARCHAR(30) NOT NULL,
     paid_at          TIMESTAMP,
     account_bank     VARCHAR(50),
-    account_number   VARCHAR(50),
-    account_holder   VARCHAR(50),
+    account_number   VARCHAR(512),
+    account_holder   VARCHAR(512),
     deposit_deadline TIMESTAMP,
     created_at       TIMESTAMP   NOT NULL,
     updated_at       TIMESTAMP   NOT NULL,
@@ -460,7 +476,7 @@ CREATE TABLE cash_receipts
     id         BIGSERIAL PRIMARY KEY,
     payment_id BIGINT      NOT NULL UNIQUE,
     purpose    VARCHAR(30) NOT NULL,
-    number     VARCHAR(50) NOT NULL,
+    number     VARCHAR(512) NOT NULL,
     created_at TIMESTAMP   NOT NULL,
     updated_at TIMESTAMP   NOT NULL,
     CONSTRAINT fk_cash_receipts_payment_id FOREIGN KEY (payment_id) REFERENCES payments (id),
@@ -514,7 +530,7 @@ CREATE TABLE inquiries
     title        VARCHAR(200) NOT NULL,
     content      TEXT        NOT NULL,
     status       VARCHAR(20) NOT NULL,
-    phone_number VARCHAR(20),
+    phone_number VARCHAR(512),
     created_at   TIMESTAMP   NOT NULL,
     updated_at   TIMESTAMP   NOT NULL,
     CONSTRAINT fk_inquiries_user_id FOREIGN KEY (user_id) REFERENCES users (id)
