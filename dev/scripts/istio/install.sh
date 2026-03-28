@@ -134,8 +134,22 @@ spec:
           nodeSelector:
             kubernetes.io/hostname: mini-might
           service:
+            type: NodePort
             externalIPs:
               - ${EXTERNAL_IP}
+            ports:
+              - port: 80
+                targetPort: 8080
+                nodePort: 32650
+                name: http2
+              - port: 443
+                targetPort: 8443
+                nodePort: 31691
+                name: https
+              - port: 15021
+                targetPort: 15021
+                nodePort: 30919
+                name: status-port
           hpaSpec:
             minReplicas: 1
             maxReplicas: 2
