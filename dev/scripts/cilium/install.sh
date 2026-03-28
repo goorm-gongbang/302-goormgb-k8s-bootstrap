@@ -28,6 +28,13 @@ if kubectl get daemonset -n kube-system cilium &>/dev/null; then
     echo "Cilium already installed and healthy ($READY/$DESIRED nodes ready)"
     echo "Skipping installation."
     kubectl -n kube-system exec -it ds/cilium -- cilium status --brief 2>/dev/null || true
+    # ServiceMonitor가 없으면 생성
+    if ! kubectl get servicemonitor -n kube-system cilium-agent &>/dev/null; then
+      echo ""
+      echo "Creating Cilium ServiceMonitor..."
+      SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+      "$SCRIPT_DIR/create-servicemonitor.sh"
+    fi
     exit 0
   fi
 fi
@@ -133,6 +140,11 @@ kubectl get pods -n kube-system -l app.kubernetes.io/part-of=cilium
 echo ""
 echo "Hubble UI:"
 kubectl get pods -n kube-system -l app.kubernetes.io/name=hubble-ui
+
+# ServiceMonitor 생성 (Prometheus 연동)
+echo ""
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$SCRIPT_DIR/create-servicemonitor.sh"
 
 echo ""
 echo "=== Next Steps ==="
