@@ -20,8 +20,8 @@ spec:
     k8s-app: cilium
   ports:
     - name: metrics
-      port: 9962
-      targetPort: 9962
+      port: 9964
+      targetPort: 9964
   clusterIP: None
 EOF
 
