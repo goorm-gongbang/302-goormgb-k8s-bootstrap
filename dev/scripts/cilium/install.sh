@@ -89,15 +89,15 @@ helm upgrade --install cilium cilium/cilium \
   --set hubble.ui.replicas=1 \
   --set hubble.metrics.enabled="{dns,drop,tcp,flow,icmp,http}" \
   --set hubble.metrics.serviceMonitor.enabled=true \
-  --set hubble.metrics.serviceMonitor.labels.release=prometheus-stack \
+  --set hubble.metrics.serviceMonitor.labels.release=prom \
   --set prometheus.enabled=true \
   --set prometheus.serviceMonitor.enabled=true \
-  --set prometheus.serviceMonitor.labels.release=prometheus-stack \
+  --set prometheus.serviceMonitor.labels.release=prom \
   --set operator.replicas=1 \
   --set operator.nodeSelector."kubernetes\.io/hostname"="$CP_NODE" \
   --set operator.prometheus.enabled=true \
   --set operator.prometheus.serviceMonitor.enabled=true \
-  --set operator.prometheus.serviceMonitor.labels.release=prometheus-stack \
+  --set operator.prometheus.serviceMonitor.labels.release=prom \
   --set operator.tolerations[0].operator=Exists \
   --set tolerations[0].operator=Exists \
   --wait \
