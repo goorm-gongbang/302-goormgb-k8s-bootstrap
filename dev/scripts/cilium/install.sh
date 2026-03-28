@@ -98,6 +98,7 @@ helm upgrade --install cilium cilium/cilium \
   --set operator.prometheus.enabled=true \
   --set operator.prometheus.serviceMonitor.enabled=true \
   --set operator.prometheus.serviceMonitor.labels.release=prometheus-stack \
+  --set operator.tolerations[0].operator=Exists \
   --set tolerations[0].operator=Exists \
   --wait \
   --timeout "${TIMEOUT}s"
