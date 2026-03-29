@@ -11,3 +11,10 @@ istio-*/
 
 
 CLAUDE.md
+
+### IntelliJ IDEA ###
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
