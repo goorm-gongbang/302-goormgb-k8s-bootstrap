@@ -1,20 +1,21 @@
 # 302-goormgb-k8s-bootstrap Makefile
 # kubeadm 클러스터 초기 설정을 위한 명령어 모음
 
-.PHONY: help install-all install-calico install-calico-legacy install-storage install-eso install-cert-manager install-istio install-argocd \
+.PHONY: help install-all install-cilium install-calico-legacy install-storage install-eso install-cert-manager install-istio install-argocd \
         deploy-root-app setup-github-ssh setup-etcd-secret wait-sync run-ddns run-ecr-creds clean-apps clean-all fix-port-conflict \
-        rbac-create-users ddns-test ddns-update install-prometheus-crds
+        rbac-create-users ddns-test ddns-update install-prometheus-crds migrate-to-cilium
 
 # 기본 타겟
 help:
 	@echo "=== kubeadm Bootstrap Commands ==="
 	@echo ""
 	@echo "초기 설치 (순서대로):"
-	@echo "  make install-all       - 전체 설치 (Calico → Storage → ESO → cert-manager → Istio → ArgoCD → Root App)"
+	@echo "  make install-all       - 전체 설치 (Cilium eBPF → Storage → ESO → cert-manager → Istio → ArgoCD → Root App)"
 	@echo ""
 	@echo "개별 설치:"
-	@echo "  make install-calico    - Calico CNI 설치 (Helm, ArgoCD 관리 가능)"
-	@echo "  make install-calico-legacy - Calico CNI 설치 (raw manifest, 레거시)"
+	@echo "  make install-cilium    - Cilium CNI 설치 (eBPF, kube-proxy 대체)"
+	@echo "  make install-calico-legacy - Calico CNI 설치 (레거시, _install.sh)"
+	@echo "  make migrate-to-cilium - Calico → Cilium 마이그레이션 (주의: 다운타임 발생)"
 	@echo "  make install-storage   - Local Path Provisioner 설치 (StorageClass)"
 	@echo "  make install-eso       - External Secrets Operator 설치"
 	@echo "  make bootstrap-aws     - AWS credentials 등록 (수동 입력)"
@@ -35,8 +36,15 @@ help:
 	@echo "  make clean-apps        - 앱 정리 (ArgoCD, cert-manager 유지)"
 	@echo "  make clean-all         - 완전 초기화 (ArgoCD 포함 전부 삭제, kubeadm 유지)"
 
+# === 노드 라벨 설정 ===
+setup-node-labels:
+	@echo "=== Setting up node labels ==="
+	@kubectl label node mini-gmk node-role=infra --overwrite 2>/dev/null || true
+	@echo "  mini-gmk: node-role=infra (for monitoring/infra workloads)"
+	@kubectl get nodes --show-labels | grep -E "NAME|node-role"
+
 # === 전체 설치 ===
-install-all: install-calico install-storage install-eso bootstrap-aws install-cert-manager install-istio install-prometheus-crds install-argocd setup-github-ssh deploy-root-app setup-etcd-secret wait-sync run-ecr-creds run-ddns
+install-all: setup-node-labels install-cilium install-storage install-eso bootstrap-aws install-cert-manager install-istio install-prometheus-crds install-argocd setup-github-ssh deploy-root-app setup-etcd-secret wait-sync run-ecr-creds run-ddns
 	@echo ""
 	@echo "=== All components installed ==="
 	@echo ""
@@ -98,13 +106,17 @@ run-ddns:
 	@./scripts/ddns/update-now.sh || echo "DDNS update skipped (CronJob may not be ready yet). Run 'make ddns-update' later."
 
 # === 개별 설치 ===
-install-calico:
-	@echo "=== Installing Calico CNI (Helm) ==="
-	./scripts/calico/install-helm.sh
+install-cilium:
+	@echo "=== Installing Cilium CNI (eBPF) ==="
+	./scripts/cilium/install.sh
 
 install-calico-legacy:
-	@echo "=== Installing Calico CNI (Legacy) ==="
-	./scripts/calico/install.sh
+	@echo "=== Installing Calico CNI (Legacy - deprecated) ==="
+	./scripts/calico/_install.sh
+
+migrate-to-cilium:
+	@echo "=== Migrating Calico to Cilium (WARNING: causes downtime!) ==="
+	./scripts/cilium/migrate-to-cilium.sh
 
 install-storage:
 	@echo "=== Installing Local Path Provisioner ==="
