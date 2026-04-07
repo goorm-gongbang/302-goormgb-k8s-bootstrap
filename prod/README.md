@@ -134,7 +134,7 @@ prod/
 
 ```bash
 # ArgoCD UI
-https://argocd.prod.playball.one
+https://argocd.playball.one
 
 # Application 상태
 kubectl get applications -n argocd
