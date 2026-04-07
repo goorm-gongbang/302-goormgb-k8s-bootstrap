@@ -292,7 +292,6 @@ CREATE TABLE blocks
     area_id         BIGINT      NOT NULL,
     section_id      BIGINT      NOT NULL,
     block_code      VARCHAR(20) NOT NULL,
-    block_num       BIGINT      NOT NULL UNIQUE,
     viewpoint       VARCHAR(30) NOT NULL,
     home_cheer_rank INTEGER,
     away_cheer_rank INTEGER,
@@ -300,11 +299,13 @@ CREATE TABLE blocks
     updated_at      TIMESTAMP   NOT NULL,
     CONSTRAINT fk_blocks_area_id FOREIGN KEY (area_id) REFERENCES areas (id),
     CONSTRAINT fk_blocks_section_id FOREIGN KEY (section_id) REFERENCES sections (id),
-    CONSTRAINT uk_block_section_code UNIQUE (section_id, block_code)
+    CONSTRAINT uk_block_section_code UNIQUE (section_id, block_code),
+    CONSTRAINT uk_block_num UNIQUE (block_num)
 );
 
 CREATE INDEX idx_block_section_id ON blocks (section_id);
 CREATE INDEX idx_block_area_id ON blocks (area_id);
+CREATE INDEX idx_block_num ON blocks (block_num);
 CREATE INDEX idx_block_viewpoint ON blocks (viewpoint);
 CREATE INDEX idx_block_home_cheer_rank ON blocks (home_cheer_rank);
 CREATE INDEX idx_block_away_cheer_rank ON blocks (away_cheer_rank);
