@@ -102,158 +102,158 @@ INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, h
 
 -- 1루 오렌지석 205~208 (area=1, section=4)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(4,  1, 4, '205', 4, 'INFIELD_1B', 1, 80, NOW(), NOW()),
-(5,  1, 4, '206', 5, 'INFIELD_1B', 2, 81, NOW(), NOW()),
-(6,  1, 4, '207', 6, 'INFIELD_1B', 3, 82, NOW(), NOW()),
-(7,  1, 4, '208', 7, 'INFIELD_1B', 4, 83, NOW(), NOW());
+(4,  1, 4, '205', 205, 'INFIELD_1B', 1, 80, NOW(), NOW()),
+(5,  1, 4, '206', 206, 'INFIELD_1B', 2, 81, NOW(), NOW()),
+(6,  1, 4, '207', 207, 'INFIELD_1B', 3, 82, NOW(), NOW()),
+(7,  1, 4, '208', 208, 'INFIELD_1B', 4, 83, NOW(), NOW());
 
 -- 3루 오렌지석 219~222 (area=2, section=10)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(8,  2, 10, '219', 8, 'INFIELD_3B', 80, 1, NOW(), NOW()),
-(9,  2, 10, '220', 9, 'INFIELD_3B', 81, 2, NOW(), NOW()),
-(10, 2, 10, '221', 10, 'INFIELD_3B', 82, 3, NOW(), NOW()),
-(11, 2, 10, '222', 11, 'INFIELD_3B', 83, 4, NOW(), NOW());
+(8,  2, 10, '219', 219, 'INFIELD_3B', 80, 1, NOW(), NOW()),
+(9,  2, 10, '220', 220, 'INFIELD_3B', 81, 2, NOW(), NOW()),
+(10, 2, 10, '221', 221, 'INFIELD_3B', 82, 3, NOW(), NOW()),
+(11, 2, 10, '222', 222, 'INFIELD_3B', 83, 4, NOW(), NOW());
 
 -- 1루 퍼플석 110~113 (area=1, section=1)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(12, 1, 1, '110', 12, 'INFIELD_1B', 10, 60, NOW(), NOW()),
-(13, 1, 1, '111', 13, 'INFIELD_1B', 11, 61, NOW(), NOW()),
-(14, 1, 1, '112', 14, 'INFIELD_1B', 12, 62, NOW(), NOW()),
-(15, 1, 1, '113', 15, 'INFIELD_1B', 13, 63, NOW(), NOW());
+(12, 1, 1, '110', 110, 'INFIELD_1B', 10, 60, NOW(), NOW()),
+(13, 1, 1, '111', 111, 'INFIELD_1B', 11, 61, NOW(), NOW()),
+(14, 1, 1, '112', 112, 'INFIELD_1B', 12, 62, NOW(), NOW()),
+(15, 1, 1, '113', 113, 'INFIELD_1B', 13, 63, NOW(), NOW());
 
 -- 3루 퍼플석 212~215 (area=2, section=7)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(16, 2, 7, '212', 16, 'INFIELD_3B', 60, 10, NOW(), NOW()),
-(17, 2, 7, '213', 17, 'INFIELD_3B', 61, 11, NOW(), NOW()),
-(18, 2, 7, '214', 18, 'INFIELD_3B', 62, 12, NOW(), NOW()),
-(19, 2, 7, '215', 19, 'INFIELD_3B', 63, 13, NOW(), NOW());
+(16, 2, 7, '212', 212, 'INFIELD_3B', 60, 10, NOW(), NOW()),
+(17, 2, 7, '213', 213, 'INFIELD_3B', 61, 11, NOW(), NOW()),
+(18, 2, 7, '214', 214, 'INFIELD_3B', 62, 12, NOW(), NOW()),
+(19, 2, 7, '215', 215, 'INFIELD_3B', 63, 13, NOW(), NOW());
 
 -- 1루 블루석 114~116 (area=1, section=3)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(20, 1, 3, '114', 20, 'INFIELD_1B', 14, 55, NOW(), NOW()),
-(21, 1, 3, '115', 21, 'INFIELD_1B', 15, 56, NOW(), NOW()),
-(22, 1, 3, '116', 22, 'INFIELD_1B', 16, 57, NOW(), NOW());
+(20, 1, 3, '114', 114, 'INFIELD_1B', 14, 55, NOW(), NOW()),
+(21, 1, 3, '115', 115, 'INFIELD_1B', 15, 56, NOW(), NOW()),
+(22, 1, 3, '116', 116, 'INFIELD_1B', 16, 57, NOW(), NOW());
 
 -- 1루 블루석 216~218 2층 (area=1, section=3)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(23, 1, 3, '216', 23, 'INFIELD_1B', 5, 70, NOW(), NOW()),
-(24, 1, 3, '217', 24, 'INFIELD_1B', 6, 71, NOW(), NOW()),
-(25, 1, 3, '218', 25, 'INFIELD_1B', 7, 72, NOW(), NOW());
+(23, 1, 3, '216', 216, 'INFIELD_1B', 5, 70, NOW(), NOW()),
+(24, 1, 3, '217', 217, 'INFIELD_1B', 6, 71, NOW(), NOW()),
+(25, 1, 3, '218', 218, 'INFIELD_1B', 7, 72, NOW(), NOW());
 
 -- 3루 블루석 107~109 (area=2, section=9)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(26, 2, 9, '107', 26, 'INFIELD_3B', 55, 14, NOW(), NOW()),
-(27, 2, 9, '108', 27, 'INFIELD_3B', 56, 15, NOW(), NOW()),
-(28, 2, 9, '109', 28, 'INFIELD_3B', 57, 16, NOW(), NOW());
+(26, 2, 9, '107', 107, 'INFIELD_3B', 55, 14, NOW(), NOW()),
+(27, 2, 9, '108', 108, 'INFIELD_3B', 56, 15, NOW(), NOW()),
+(28, 2, 9, '109', 109, 'INFIELD_3B', 57, 16, NOW(), NOW());
 
 -- 3루 블루석 209~211 2층 (area=2, section=9)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(29, 2, 9, '209', 29, 'INFIELD_3B', 70, 5, NOW(), NOW()),
-(30, 2, 9, '210', 30, 'INFIELD_3B', 71, 6, NOW(), NOW()),
-(31, 2, 9, '211', 31, 'INFIELD_3B', 72, 7, NOW(), NOW());
+(29, 2, 9, '209', 209, 'INFIELD_3B', 70, 5, NOW(), NOW()),
+(30, 2, 9, '210', 210, 'INFIELD_3B', 71, 6, NOW(), NOW()),
+(31, 2, 9, '211', 211, 'INFIELD_3B', 72, 7, NOW(), NOW());
 
 -- 1루 레드석 117~122 (area=1, section=5)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(32, 1, 5, '117', 32, 'INFIELD_1B', 17, 45, NOW(), NOW()),
-(33, 1, 5, '118', 33, 'INFIELD_1B', 18, 46, NOW(), NOW()),
-(34, 1, 5, '119', 34, 'INFIELD_1B', 19, 47, NOW(), NOW()),
-(35, 1, 5, '120', 35, 'INFIELD_1B', 20, 48, NOW(), NOW()),
-(36, 1, 5, '121', 36, 'INFIELD_1B', 21, 49, NOW(), NOW()),
-(37, 1, 5, '122', 37, 'INFIELD_1B', 22, 50, NOW(), NOW());
+(32, 1, 5, '117', 117, 'INFIELD_1B', 17, 45, NOW(), NOW()),
+(33, 1, 5, '118', 118, 'INFIELD_1B', 18, 46, NOW(), NOW()),
+(34, 1, 5, '119', 119, 'INFIELD_1B', 19, 47, NOW(), NOW()),
+(35, 1, 5, '120', 120, 'INFIELD_1B', 20, 48, NOW(), NOW()),
+(36, 1, 5, '121', 121, 'INFIELD_1B', 21, 49, NOW(), NOW()),
+(37, 1, 5, '122', 122, 'INFIELD_1B', 22, 50, NOW(), NOW());
 
 -- 1루 레드석 223~226 2층 (area=1, section=5)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(38, 1, 5, '223', 38, 'INFIELD_1B', 8, 65, NOW(), NOW()),
-(39, 1, 5, '224', 39, 'INFIELD_1B', 9, 66, NOW(), NOW()),
-(40, 1, 5, '225', 40, 'INFIELD_1B', 10, 67, NOW(), NOW()),
-(41, 1, 5, '226', 41, 'INFIELD_1B', 11, 68, NOW(), NOW());
+(38, 1, 5, '223', 223, 'INFIELD_1B', 8, 65, NOW(), NOW()),
+(39, 1, 5, '224', 224, 'INFIELD_1B', 9, 66, NOW(), NOW()),
+(40, 1, 5, '225', 225, 'INFIELD_1B', 10, 67, NOW(), NOW()),
+(41, 1, 5, '226', 226, 'INFIELD_1B', 11, 68, NOW(), NOW());
 
 -- 3루 레드석 101~106 (area=2, section=11)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(42, 2, 11, '101', 42, 'INFIELD_3B', 45, 17, NOW(), NOW()),
-(43, 2, 11, '102', 43, 'INFIELD_3B', 46, 18, NOW(), NOW()),
-(44, 2, 11, '103', 44, 'INFIELD_3B', 47, 19, NOW(), NOW()),
-(45, 2, 11, '104', 45, 'INFIELD_3B', 48, 20, NOW(), NOW()),
-(46, 2, 11, '105', 46, 'INFIELD_3B', 49, 21, NOW(), NOW()),
-(47, 2, 11, '106', 47, 'INFIELD_3B', 50, 22, NOW(), NOW());
+(42, 2, 11, '101', 101, 'INFIELD_3B', 45, 17, NOW(), NOW()),
+(43, 2, 11, '102', 102, 'INFIELD_3B', 46, 18, NOW(), NOW()),
+(44, 2, 11, '103', 103, 'INFIELD_3B', 47, 19, NOW(), NOW()),
+(45, 2, 11, '104', 104, 'INFIELD_3B', 48, 20, NOW(), NOW()),
+(46, 2, 11, '105', 105, 'INFIELD_3B', 49, 21, NOW(), NOW()),
+(47, 2, 11, '106', 106, 'INFIELD_3B', 50, 22, NOW(), NOW());
 
 -- 3루 레드석 201~204 2층 (area=2, section=11)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(48, 2, 11, '201', 48, 'INFIELD_3B', 65, 8, NOW(), NOW()),
-(49, 2, 11, '202', 49, 'INFIELD_3B', 66, 9, NOW(), NOW()),
-(50, 2, 11, '203', 50, 'INFIELD_3B', 67, 10, NOW(), NOW()),
-(51, 2, 11, '204', 51, 'INFIELD_3B', 68, 11, NOW(), NOW());
+(48, 2, 11, '201', 201, 'INFIELD_3B', 65, 8, NOW(), NOW()),
+(49, 2, 11, '202', 202, 'INFIELD_3B', 66, 9, NOW(), NOW()),
+(50, 2, 11, '203', 203, 'INFIELD_3B', 67, 10, NOW(), NOW()),
+(51, 2, 11, '204', 204, 'INFIELD_3B', 68, 11, NOW(), NOW());
 
 -- 1루 네이비석 301~317 (area=1, section=6)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(52, 1, 6, '301', 52, 'INFIELD_1B', 23, 35, NOW(), NOW()),
-(53, 1, 6, '302', 53, 'INFIELD_1B', 24, 36, NOW(), NOW()),
-(54, 1, 6, '303', 54, 'INFIELD_1B', 25, 37, NOW(), NOW()),
-(55, 1, 6, '304', 55, 'INFIELD_1B', 26, 38, NOW(), NOW()),
-(56, 1, 6, '305', 56, 'INFIELD_1B', 27, 39, NOW(), NOW()),
-(57, 1, 6, '306', 57, 'INFIELD_1B', 28, 40, NOW(), NOW()),
-(58, 1, 6, '307', 58, 'INFIELD_1B', 29, 41, NOW(), NOW()),
-(59, 1, 6, '308', 59, 'INFIELD_1B', 30, 42, NOW(), NOW()),
-(60, 1, 6, '309', 60, 'INFIELD_1B', 31, 43, NOW(), NOW()),
-(61, 1, 6, '310', 61, 'INFIELD_1B', 32, 44, NOW(), NOW()),
-(62, 1, 6, '311', 62, 'INFIELD_1B', 33, 45, NOW(), NOW()),
-(63, 1, 6, '312', 63, 'INFIELD_1B', 34, 46, NOW(), NOW()),
-(64, 1, 6, '313', 64, 'INFIELD_1B', 35, 47, NOW(), NOW()),
-(65, 1, 6, '314', 65, 'INFIELD_1B', 36, 48, NOW(), NOW()),
-(66, 1, 6, '315', 66, 'INFIELD_1B', 37, 49, NOW(), NOW()),
-(67, 1, 6, '316', 67, 'INFIELD_1B', 38, 50, NOW(), NOW()),
-(68, 1, 6, '317', 68, 'INFIELD_1B', 39, 51, NOW(), NOW());
+(52, 1, 6, '301', 301, 'INFIELD_1B', 23, 35, NOW(), NOW()),
+(53, 1, 6, '302', 302, 'INFIELD_1B', 24, 36, NOW(), NOW()),
+(54, 1, 6, '303', 303, 'INFIELD_1B', 25, 37, NOW(), NOW()),
+(55, 1, 6, '304', 304, 'INFIELD_1B', 26, 38, NOW(), NOW()),
+(56, 1, 6, '305', 305, 'INFIELD_1B', 27, 39, NOW(), NOW()),
+(57, 1, 6, '306', 306, 'INFIELD_1B', 28, 40, NOW(), NOW()),
+(58, 1, 6, '307', 307, 'INFIELD_1B', 29, 41, NOW(), NOW()),
+(59, 1, 6, '308', 308, 'INFIELD_1B', 30, 42, NOW(), NOW()),
+(60, 1, 6, '309', 309, 'INFIELD_1B', 31, 43, NOW(), NOW()),
+(61, 1, 6, '310', 310, 'INFIELD_1B', 32, 44, NOW(), NOW()),
+(62, 1, 6, '311', 311, 'INFIELD_1B', 33, 45, NOW(), NOW()),
+(63, 1, 6, '312', 312, 'INFIELD_1B', 34, 46, NOW(), NOW()),
+(64, 1, 6, '313', 313, 'INFIELD_1B', 35, 47, NOW(), NOW()),
+(65, 1, 6, '314', 314, 'INFIELD_1B', 36, 48, NOW(), NOW()),
+(66, 1, 6, '315', 315, 'INFIELD_1B', 37, 49, NOW(), NOW()),
+(67, 1, 6, '316', 316, 'INFIELD_1B', 38, 50, NOW(), NOW()),
+(68, 1, 6, '317', 317, 'INFIELD_1B', 39, 51, NOW(), NOW());
 
 -- 3루 네이비석 318~334 (area=2, section=12)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(69, 2, 12, '318', 69, 'INFIELD_3B', 35, 23, NOW(), NOW()),
-(70, 2, 12, '319', 70, 'INFIELD_3B', 36, 24, NOW(), NOW()),
-(71, 2, 12, '320', 71, 'INFIELD_3B', 37, 25, NOW(), NOW()),
-(72, 2, 12, '321', 72, 'INFIELD_3B', 38, 26, NOW(), NOW()),
-(73, 2, 12, '322', 73, 'INFIELD_3B', 39, 27, NOW(), NOW()),
-(74, 2, 12, '323', 74, 'INFIELD_3B', 40, 28, NOW(), NOW()),
-(75, 2, 12, '324', 75, 'INFIELD_3B', 41, 29, NOW(), NOW()),
-(76, 2, 12, '325', 76, 'INFIELD_3B', 42, 30, NOW(), NOW()),
-(77, 2, 12, '326', 77, 'INFIELD_3B', 43, 31, NOW(), NOW()),
-(78, 2, 12, '327', 78, 'INFIELD_3B', 44, 32, NOW(), NOW()),
-(79, 2, 12, '328', 79, 'INFIELD_3B', 45, 33, NOW(), NOW()),
-(80, 2, 12, '329', 80, 'INFIELD_3B', 46, 34, NOW(), NOW()),
-(81, 2, 12, '330', 81, 'INFIELD_3B', 47, 35, NOW(), NOW()),
-(82, 2, 12, '331', 82, 'INFIELD_3B', 48, 36, NOW(), NOW()),
-(83, 2, 12, '332', 83, 'INFIELD_3B', 49, 37, NOW(), NOW()),
-(84, 2, 12, '333', 84, 'INFIELD_3B', 50, 38, NOW(), NOW()),
-(85, 2, 12, '334', 85, 'INFIELD_3B', 51, 39, NOW(), NOW());
+(69, 2, 12, '318', 318, 'INFIELD_3B', 35, 23, NOW(), NOW()),
+(70, 2, 12, '319', 319, 'INFIELD_3B', 36, 24, NOW(), NOW()),
+(71, 2, 12, '320', 320, 'INFIELD_3B', 37, 25, NOW(), NOW()),
+(72, 2, 12, '321', 321, 'INFIELD_3B', 38, 26, NOW(), NOW()),
+(73, 2, 12, '322', 322, 'INFIELD_3B', 39, 27, NOW(), NOW()),
+(74, 2, 12, '323', 323, 'INFIELD_3B', 40, 28, NOW(), NOW()),
+(75, 2, 12, '324', 324, 'INFIELD_3B', 41, 29, NOW(), NOW()),
+(76, 2, 12, '325', 325, 'INFIELD_3B', 42, 30, NOW(), NOW()),
+(77, 2, 12, '326', 326, 'INFIELD_3B', 43, 31, NOW(), NOW()),
+(78, 2, 12, '327', 327, 'INFIELD_3B', 44, 32, NOW(), NOW()),
+(79, 2, 12, '328', 328, 'INFIELD_3B', 45, 33, NOW(), NOW()),
+(80, 2, 12, '329', 329, 'INFIELD_3B', 46, 34, NOW(), NOW()),
+(81, 2, 12, '330', 330, 'INFIELD_3B', 47, 35, NOW(), NOW()),
+(82, 2, 12, '331', 331, 'INFIELD_3B', 48, 36, NOW(), NOW()),
+(83, 2, 12, '332', 332, 'INFIELD_3B', 49, 37, NOW(), NOW()),
+(84, 2, 12, '333', 333, 'INFIELD_3B', 50, 38, NOW(), NOW()),
+(85, 2, 12, '334', 334, 'INFIELD_3B', 51, 39, NOW(), NOW());
 
 -- 외야 그린석 401~407 (1루방향 OUTFIELD_R, area=3, section=13)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(86,  3, 13, '401', 86, 'OUTFIELD_R', 60, 90, NOW(), NOW()),
-(87,  3, 13, '402', 87, 'OUTFIELD_R', 61, 91, NOW(), NOW()),
-(88,  3, 13, '403', 88, 'OUTFIELD_R', 62, 92, NOW(), NOW()),
-(89,  3, 13, '404', 89, 'OUTFIELD_R', 63, 93, NOW(), NOW()),
-(90,  3, 13, '405', 90, 'OUTFIELD_R', 64, 94, NOW(), NOW()),
-(91,  3, 13, '406', 91, 'OUTFIELD_R', 65, 95, NOW(), NOW()),
-(92,  3, 13, '407', 92, 'OUTFIELD_R', 66, 96, NOW(), NOW());
+(86,  3, 13, '401', 401, 'OUTFIELD_R', 60, 90, NOW(), NOW()),
+(87,  3, 13, '402', 402, 'OUTFIELD_R', 61, 91, NOW(), NOW()),
+(88,  3, 13, '403', 403, 'OUTFIELD_R', 62, 92, NOW(), NOW()),
+(89,  3, 13, '404', 404, 'OUTFIELD_R', 63, 93, NOW(), NOW()),
+(90,  3, 13, '405', 405, 'OUTFIELD_R', 64, 94, NOW(), NOW()),
+(91,  3, 13, '406', 406, 'OUTFIELD_R', 65, 95, NOW(), NOW()),
+(92,  3, 13, '407', 407, 'OUTFIELD_R', 66, 96, NOW(), NOW());
 
 -- 외야 그린석 408~415 (중앙 OUTFIELD_C, area=3, section=13)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(93,  3, 13, '408', 93, 'OUTFIELD_C', 70, 70, NOW(), NOW()),
-(94,  3, 13, '409', 94, 'OUTFIELD_C', 71, 71, NOW(), NOW()),
-(95,  3, 13, '410', 95, 'OUTFIELD_C', 72, 72, NOW(), NOW()),
-(96,  3, 13, '411', 96, 'OUTFIELD_C', 73, 73, NOW(), NOW()),
-(97,  3, 13, '412', 97, 'OUTFIELD_C', 74, 74, NOW(), NOW()),
-(98,  3, 13, '413', 98, 'OUTFIELD_C', 75, 75, NOW(), NOW()),
-(99,  3, 13, '414', 99, 'OUTFIELD_C', 76, 76, NOW(), NOW()),
-(100, 3, 13, '415', 100, 'OUTFIELD_C', 77, 77, NOW(), NOW());
+(93,  3, 13, '408', 408, 'OUTFIELD_C', 70, 70, NOW(), NOW()),
+(94,  3, 13, '409', 409, 'OUTFIELD_C', 71, 71, NOW(), NOW()),
+(95,  3, 13, '410', 410, 'OUTFIELD_C', 72, 72, NOW(), NOW()),
+(96,  3, 13, '411', 411, 'OUTFIELD_C', 73, 73, NOW(), NOW()),
+(97,  3, 13, '412', 412, 'OUTFIELD_C', 74, 74, NOW(), NOW()),
+(98,  3, 13, '413', 413, 'OUTFIELD_C', 75, 75, NOW(), NOW()),
+(99,  3, 13, '414', 414, 'OUTFIELD_C', 76, 76, NOW(), NOW()),
+(100, 3, 13, '415', 415, 'OUTFIELD_C', 77, 77, NOW(), NOW());
 
 -- 외야 그린석 416~422 (3루방향 OUTFIELD_L, area=3, section=13)
 INSERT INTO blocks (id, area_id, section_id, block_code, block_num, viewpoint, home_cheer_rank, away_cheer_rank, created_at, updated_at) VALUES
-(101, 3, 13, '416', 101, 'OUTFIELD_L', 90, 60, NOW(), NOW()),
-(102, 3, 13, '417', 102, 'OUTFIELD_L', 91, 61, NOW(), NOW()),
-(103, 3, 13, '418', 103, 'OUTFIELD_L', 92, 62, NOW(), NOW()),
-(104, 3, 13, '419', 104, 'OUTFIELD_L', 93, 63, NOW(), NOW()),
-(105, 3, 13, '420', 105, 'OUTFIELD_L', 94, 64, NOW(), NOW()),
-(106, 3, 13, '421', 106, 'OUTFIELD_L', 95, 65, NOW(), NOW()),
-(107, 3, 13, '422', 107, 'OUTFIELD_L', 96, 66, NOW(), NOW());
+(101, 3, 13, '416', 416, 'OUTFIELD_L', 90, 60, NOW(), NOW()),
+(102, 3, 13, '417', 417, 'OUTFIELD_L', 91, 61, NOW(), NOW()),
+(103, 3, 13, '418', 418, 'OUTFIELD_L', 92, 62, NOW(), NOW()),
+(104, 3, 13, '419', 419, 'OUTFIELD_L', 93, 63, NOW(), NOW()),
+(105, 3, 13, '420', 420, 'OUTFIELD_L', 94, 64, NOW(), NOW()),
+(106, 3, 13, '421', 421, 'OUTFIELD_L', 95, 65, NOW(), NOW()),
+(107, 3, 13, '422', 422, 'OUTFIELD_L', 96, 66, NOW(), NOW());
 
 SELECT setval('blocks_id_seq', 107);
 
