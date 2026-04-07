@@ -200,7 +200,7 @@ kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 # Values 파일 다운로드 (303-goormgb-k8s-helm 레포, private)
 # GitHub 토큰은 AWS Secrets Manager에서 가져옴: prod/github/helm-repo-token
 # raw.githubusercontent.com은 private repo에서 Bearer 인증이 불안정 → GitHub API 사용
-GITHUB_API_URL="https://api.github.com/repos/goorm-gongbang/303-goormgb-k8s-helm/contents/prod/values/core/values-argocd-install.yaml?ref=prod/ash"
+GITHUB_API_URL="https://api.github.com/repos/goorm-gongbang/303-goormgb-k8s-helm/contents/prod/values/core/values-argocd-install.yaml?ref=argocd-sync/prod"
 ARGOCD_VALUES_FILE="/tmp/argocd-values.yaml"
 
 # AWS Secrets Manager에서 GitHub 토큰 조회
@@ -251,7 +251,7 @@ server:
     type: ClusterIP
 configs:
   cm:
-    url: https://argocd.prod.playball.one
+    url: https://argocd.playball.one
 VALUESEOF
 fi
 
