@@ -8,7 +8,7 @@ help:
 	@echo "=== Prod EKS 부트스트랩 명령어 ==="
 	@echo ""
 	@echo "전체 설치:"
-	@echo "  make install-all       - 전체 설치 (ESO → Karpenter → ArgoCD → Root App)"
+	@echo "  make install-all       - 전체 설치 (ESO → Karpenter → ArgoCD → DB Init → Root App)"
 	@echo ""
 	@echo "개별 설치:"
 	@echo "  make install-eso       - External Secrets Operator 설치"

@@ -1,6 +1,6 @@
 -- ============================================================
--- prod/01-schema.sql
--- Prod 환경 스키마 초기화 (26개 엔티티 기준)
+-- db-seed/01-shcema.sql
+-- 로컬/스테이징 환경 스키마 초기화 (27개 엔티티 기준)
 -- 실행 순서: 1번째
 -- ============================================================
 
@@ -32,6 +32,7 @@ DROP TABLE IF EXISTS matches CASCADE;
 DROP TABLE IF EXISTS clubs CASCADE;
 DROP TABLE IF EXISTS stadiums CASCADE;
 DROP TABLE IF EXISTS withdrawal_requests CASCADE;
+DROP TABLE IF EXISTS load_test_users CASCADE;
 DROP TABLE IF EXISTS dev_users CASCADE;
 DROP TABLE IF EXISTS user_sns CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
@@ -114,17 +115,17 @@ CREATE TABLE team_season_stats
 CREATE TABLE users
 (
     id                      BIGSERIAL PRIMARY KEY,
-    status                  VARCHAR(20) NOT NULL DEFAULT 'ACTIVATE',
-    email                   VARCHAR(255),
-    nickname                VARCHAR(100),
-    profile_image_url       VARCHAR(255),
-    onboarding_completed    BOOLEAN     NOT NULL DEFAULT false,
+    status                  VARCHAR(20)   NOT NULL DEFAULT 'ACTIVATE',
+    email                   VARCHAR(512),
+    nickname                VARCHAR(512),
+    profile_image_url       VARCHAR(1024),
+    onboarding_completed    BOOLEAN       NOT NULL DEFAULT false,
     onboarding_completed_at TIMESTAMP,
     last_login_at           TIMESTAMP,
-    marketing_consent       BOOLEAN     NOT NULL DEFAULT false,
+    marketing_consent       BOOLEAN       NOT NULL DEFAULT false,
     marketing_consented_at  TIMESTAMP,
-    created_at              TIMESTAMP   NOT NULL,
-    updated_at              TIMESTAMP   NOT NULL
+    created_at              TIMESTAMP     NOT NULL,
+    updated_at              TIMESTAMP     NOT NULL
 );
 
 -- ============================================================
@@ -132,14 +133,15 @@ CREATE TABLE users
 -- ============================================================
 CREATE TABLE user_sns
 (
-    id               BIGSERIAL PRIMARY KEY,
-    user_id          BIGINT       NOT NULL,
-    provider         VARCHAR(20)  NOT NULL,
-    provider_user_id VARCHAR(128) NOT NULL,
-    created_at       TIMESTAMP    NOT NULL,
-    updated_at       TIMESTAMP    NOT NULL,
+    id                   BIGSERIAL PRIMARY KEY,
+    user_id              BIGINT       NOT NULL,
+    provider             VARCHAR(20)  NOT NULL DEFAULT 'KAKAO',
+    provider_user_id     VARCHAR(512) NOT NULL,
+    provider_user_id_hash VARCHAR(64) NOT NULL,
+    created_at           TIMESTAMP    NOT NULL,
+    updated_at           TIMESTAMP    NOT NULL,
     CONSTRAINT fk_user_sns_user_id FOREIGN KEY (user_id) REFERENCES users (id),
-    CONSTRAINT uk_user_sns_provider UNIQUE (provider, provider_user_id)
+    CONSTRAINT uk_user_sns_provider UNIQUE (provider, provider_user_id_hash)
 );
 
 CREATE INDEX idx_user_sns_user_id ON user_sns (user_id);
@@ -156,6 +158,20 @@ CREATE TABLE dev_users
     created_at    TIMESTAMP    NOT NULL,
     updated_at    TIMESTAMP    NOT NULL,
     CONSTRAINT fk_dev_users_user_id FOREIGN KEY (user_id) REFERENCES users (id)
+);
+
+-- ============================================================
+-- load_test_users
+-- ============================================================
+CREATE TABLE load_test_users
+(
+    id            BIGSERIAL PRIMARY KEY,
+    login_id      VARCHAR(50)  NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    user_id       BIGINT       NOT NULL UNIQUE,
+    created_at    TIMESTAMP    NOT NULL,
+    updated_at    TIMESTAMP    NOT NULL,
+    CONSTRAINT fk_load_test_users_user_id FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
 -- ============================================================
@@ -277,6 +293,7 @@ CREATE TABLE blocks
     area_id         BIGINT      NOT NULL,
     section_id      BIGINT      NOT NULL,
     block_code      VARCHAR(20) NOT NULL,
+    block_num       BIGINT      NOT NULL,
     viewpoint       VARCHAR(30) NOT NULL,
     home_cheer_rank INTEGER,
     away_cheer_rank INTEGER,
@@ -284,11 +301,13 @@ CREATE TABLE blocks
     updated_at      TIMESTAMP   NOT NULL,
     CONSTRAINT fk_blocks_area_id FOREIGN KEY (area_id) REFERENCES areas (id),
     CONSTRAINT fk_blocks_section_id FOREIGN KEY (section_id) REFERENCES sections (id),
-    CONSTRAINT uk_block_section_code UNIQUE (section_id, block_code)
+    CONSTRAINT uk_block_section_code UNIQUE (section_id, block_code),
+    CONSTRAINT uk_block_num UNIQUE (block_num)
 );
 
 CREATE INDEX idx_block_section_id ON blocks (section_id);
 CREATE INDEX idx_block_area_id ON blocks (area_id);
+CREATE INDEX idx_block_num ON blocks (block_num);
 CREATE INDEX idx_block_viewpoint ON blocks (viewpoint);
 CREATE INDEX idx_block_home_cheer_rank ON blocks (home_cheer_rank);
 CREATE INDEX idx_block_away_cheer_rank ON blocks (away_cheer_rank);
@@ -298,14 +317,14 @@ CREATE INDEX idx_block_away_cheer_rank ON blocks (away_cheer_rank);
 -- ============================================================
 CREATE TABLE seats
 (
-    id               BIGSERIAL PRIMARY KEY,
-    block_id         BIGINT      NOT NULL,
-    row_no           INTEGER     NOT NULL,
-    seat_no          INTEGER     NOT NULL,
-    template_col_no  INTEGER     NOT NULL,
-    seat_zone        VARCHAR(10) NOT NULL,
-    created_at       TIMESTAMP   NOT NULL,
-    updated_at       TIMESTAMP   NOT NULL,
+    id              BIGSERIAL PRIMARY KEY,
+    block_id        BIGINT      NOT NULL,
+    row_no          INTEGER     NOT NULL,
+    seat_no         INTEGER     NOT NULL,
+    template_col_no INTEGER     NOT NULL,
+    seat_zone       VARCHAR(10) NOT NULL,
+    created_at      TIMESTAMP   NOT NULL,
+    updated_at      TIMESTAMP   NOT NULL,
     CONSTRAINT fk_seats_block_id FOREIGN KEY (block_id) REFERENCES blocks (id),
     CONSTRAINT uk_seat_block_row_seat UNIQUE (block_id, row_no, seat_no),
     CONSTRAINT uk_seat_block_row_template_col UNIQUE (block_id, row_no, template_col_no)
@@ -384,20 +403,20 @@ CREATE INDEX idx_price_policies_section_id ON price_policies (section_id);
 CREATE TABLE orders
 (
     id                 BIGSERIAL PRIMARY KEY,
-    user_id            BIGINT      NOT NULL,
-    match_id           BIGINT      NOT NULL,
-    status             VARCHAR(30) NOT NULL,
-    total_amount       INTEGER     NOT NULL,
-    booking_fee        INTEGER     NOT NULL DEFAULT 2000,
-    cancellation_fee   INTEGER     NOT NULL,
+    user_id            BIGINT       NOT NULL,
+    match_id           BIGINT       NOT NULL,
+    status             VARCHAR(30)  NOT NULL DEFAULT 'PAYMENT_PENDING',
+    total_amount       INTEGER      NOT NULL,
+    booking_fee        INTEGER      NOT NULL DEFAULT 2000,
+    cancellation_fee   INTEGER      NOT NULL DEFAULT 0,
     refunded_amount    INTEGER,
     cancelled_at       TIMESTAMP,
-    orderer_name       VARCHAR(50)  NOT NULL,
-    orderer_email      VARCHAR(255) NOT NULL,
-    orderer_phone      VARCHAR(20)  NOT NULL,
-    orderer_birth_date VARCHAR(6)   NOT NULL,
-    created_at         TIMESTAMP   NOT NULL,
-    updated_at         TIMESTAMP   NOT NULL,
+    orderer_name       VARCHAR(512) NOT NULL,
+    orderer_email      VARCHAR(512) NOT NULL,
+    orderer_phone      VARCHAR(512) NOT NULL,
+    orderer_birth_date VARCHAR(512) NOT NULL,
+    created_at         TIMESTAMP    NOT NULL,
+    updated_at         TIMESTAMP    NOT NULL,
     CONSTRAINT fk_orders_user_id FOREIGN KEY (user_id) REFERENCES users (id),
     CONSTRAINT fk_orders_match_id FOREIGN KEY (match_id) REFERENCES matches (id)
 );
@@ -405,6 +424,7 @@ CREATE TABLE orders
 CREATE INDEX idx_orders_user_id ON orders (user_id);
 CREATE INDEX idx_orders_match_id ON orders (match_id);
 CREATE INDEX idx_orders_user_id_status ON orders (user_id, status);
+CREATE INDEX idx_orders_user_id_status_match ON orders (user_id, status, match_id);
 CREATE INDEX idx_orders_user_id_created_at ON orders (user_id, created_at);
 CREATE INDEX idx_orders_status ON orders (status);
 
@@ -436,13 +456,13 @@ CREATE INDEX idx_order_seats_order_id ON order_seats (order_id);
 CREATE TABLE payments
 (
     id               BIGSERIAL PRIMARY KEY,
-    order_id         BIGINT      NOT NULL UNIQUE,
+    order_id         BIGINT      NOT NULL,
     payment_method   VARCHAR(30) NOT NULL,
-    status           VARCHAR(30) NOT NULL,
+    status           VARCHAR(30) NOT NULL DEFAULT 'PENDING',
     paid_at          TIMESTAMP,
     account_bank     VARCHAR(50),
-    account_number   VARCHAR(50),
-    account_holder   VARCHAR(50),
+    account_number   VARCHAR(512),
+    account_holder   VARCHAR(512),
     deposit_deadline TIMESTAMP,
     created_at       TIMESTAMP   NOT NULL,
     updated_at       TIMESTAMP   NOT NULL,
@@ -458,11 +478,11 @@ CREATE INDEX idx_payments_status ON payments (status);
 CREATE TABLE cash_receipts
 (
     id         BIGSERIAL PRIMARY KEY,
-    payment_id BIGINT      NOT NULL UNIQUE,
-    purpose    VARCHAR(30) NOT NULL,
-    number     VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP   NOT NULL,
-    updated_at TIMESTAMP   NOT NULL,
+    payment_id BIGINT       NOT NULL,
+    purpose    VARCHAR(30)  NOT NULL,
+    number     VARCHAR(512) NOT NULL,
+    created_at TIMESTAMP    NOT NULL,
+    updated_at TIMESTAMP    NOT NULL,
     CONSTRAINT fk_cash_receipts_payment_id FOREIGN KEY (payment_id) REFERENCES payments (id),
     CONSTRAINT uk_cash_receipts_payment_id UNIQUE (payment_id)
 );
@@ -475,7 +495,7 @@ CREATE TABLE qr_tokens
     id         BIGSERIAL PRIMARY KEY,
     order_id   BIGINT       NOT NULL,
     user_id    BIGINT       NOT NULL,
-    qr_token   VARCHAR(512) NOT NULL UNIQUE,
+    qr_token   VARCHAR(512) NOT NULL,
     expires_at TIMESTAMP    NOT NULL,
     created_at TIMESTAMP    NOT NULL,
     updated_at TIMESTAMP    NOT NULL,
@@ -494,13 +514,13 @@ CREATE INDEX idx_qr_tokens_expires_at ON qr_tokens (expires_at);
 CREATE TABLE cancellation_fee_policies
 (
     id                     BIGSERIAL PRIMARY KEY,
-    days_before_match_min  INTEGER        NOT NULL,
+    days_before_match_min  INTEGER       NOT NULL,
     days_before_match_max  INTEGER,
-    cancellable            BOOLEAN        NOT NULL,
-    ticket_fee_rate        DECIMAL(5, 3)  NOT NULL,
-    booking_fee_refundable BOOLEAN        NOT NULL,
-    created_at             TIMESTAMP      NOT NULL,
-    updated_at             TIMESTAMP      NOT NULL
+    cancellable            BOOLEAN       NOT NULL,
+    ticket_fee_rate        DECIMAL(5, 3) NOT NULL,
+    booking_fee_refundable BOOLEAN       NOT NULL,
+    created_at             TIMESTAMP     NOT NULL,
+    updated_at             TIMESTAMP     NOT NULL
 );
 
 -- ============================================================
@@ -509,14 +529,15 @@ CREATE TABLE cancellation_fee_policies
 CREATE TABLE inquiries
 (
     id           BIGSERIAL PRIMARY KEY,
-    user_id      BIGINT      NOT NULL,
-    category     VARCHAR(30) NOT NULL,
+    user_id      BIGINT       NOT NULL,
+    category     VARCHAR(30)  NOT NULL,
     title        VARCHAR(200) NOT NULL,
-    content      TEXT        NOT NULL,
-    status       VARCHAR(20) NOT NULL,
-    phone_number VARCHAR(20),
-    created_at   TIMESTAMP   NOT NULL,
-    updated_at   TIMESTAMP   NOT NULL,
+    content      TEXT         NOT NULL,
+    status       VARCHAR(20)  NOT NULL DEFAULT 'REGISTERED',
+    phone_number VARCHAR(512),
+    file_key     VARCHAR(255),
+    created_at   TIMESTAMP    NOT NULL,
+    updated_at   TIMESTAMP    NOT NULL,
     CONSTRAINT fk_inquiries_user_id FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
@@ -530,7 +551,7 @@ CREATE INDEX idx_inquiries_status ON inquiries (status);
 CREATE TABLE inquiry_answers
 (
     id          BIGSERIAL PRIMARY KEY,
-    inquiry_id  BIGINT    NOT NULL UNIQUE,
+    inquiry_id  BIGINT    NOT NULL,
     content     TEXT      NOT NULL,
     answered_at TIMESTAMP NOT NULL,
     created_at  TIMESTAMP NOT NULL,

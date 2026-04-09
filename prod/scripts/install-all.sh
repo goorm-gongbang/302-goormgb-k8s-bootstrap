@@ -12,7 +12,7 @@ set -euo pipefail
 #   ./prod/scripts/install-all.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STAGING_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROD_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # 환경변수 (필요시 오버라이드)
 ARGOCD_URL="${ARGOCD_URL:-https://argocd.playball.one}"
@@ -298,7 +298,7 @@ echo ""
 #############################################
 echo "=== GitHub SSH Key 설정 중 ==="
 
-kubectl apply -f "$STAGING_DIR/argo-init/external-secret-github.yaml"
+kubectl apply -f "$PROD_DIR/argo-init/external-secret-github.yaml"
 
 # Secret 생성 대기
 echo "repo-goormgb-helm 시크릿 대기 중..."
@@ -335,7 +335,7 @@ echo ""
 echo "=== ArgoCD RBAC 설정 중 ==="
 
 # RBAC ExternalSecret 생성
-kubectl apply -f "$STAGING_DIR/argo-init/external-secret-rbac.yaml"
+kubectl apply -f "$PROD_DIR/argo-init/external-secret-rbac.yaml"
 
 # ExternalSecret 강제 새로고침
 kubectl annotate externalsecret argocd-rbac-eso -n argocd \
@@ -392,11 +392,28 @@ fi
 echo ""
 
 #############################################
+# 6.5 Database Initialization
+#############################################
+echo "=== Database 초기화 진행 중 ==="
+if [[ -f "$PROD_DIR/db/db-init.sh" ]]; then
+  echo "데이터베이스 초기화를 실행합니다..."
+  # db-init.sh는 이제 테라폼 연동 및 자동 터널링을 지원하는 완전 자동화 버전입니다.
+  "$PROD_DIR/db/db-init.sh" || {
+    echo "경고: 데이터베이스 초기화 중 오류가 발생했거나 사용자가 취소했습니다."
+    echo "애플리케이션 배포를 계속 진행합니다..."
+  }
+else
+  echo "경고: db/db-init.sh 파일을 찾을 수 없어 건너뜁니다."
+fi
+
+echo ""
+
+#############################################
 # 7. Root Application
 #############################################
 echo "=== Root Application 배포 중 ==="
 
-kubectl apply -f "$STAGING_DIR/argo-init/root-application.yaml"
+kubectl apply -f "$PROD_DIR/argo-init/root-application.yaml"
 
 echo "root-prod 앱 대기 중..."
 sleep 5
