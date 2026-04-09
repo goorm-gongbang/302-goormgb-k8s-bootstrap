@@ -169,7 +169,7 @@ INSERT INTO matches (match_at, home_club_id, away_club_id, stadium_id, sale_stat
                                                                                                                 ('2026-04-14 09:30:00', 8,  1,  2, 'ON_SALE', NOW(), NOW()),
                                                                                                                 ('2026-04-14 09:30:00', 7,  9,  4, 'ON_SALE', NOW(), NOW()),
                                                                                                                 ('2026-04-14 09:30:00', 10, 3,  8, 'ON_SALE', NOW(), NOW()),
-                                                                                                                ('2026-04-14 09:30:00', 4,  2,  5, 'ON_SALE', NOW(), NOW());ON_SALE
+                                                                                                                ('2026-04-14 09:30:00', 4,  2,  5, 'ON_SALE', NOW(), NOW());
 -- 4/15 ~ 4/16
 INSERT INTO matches (match_at, home_club_id, away_club_id, stadium_id, sale_status, created_at, updated_at) VALUES
                                                                                                                 ('2026-04-15 09:30:00', 6,  5,  1, 'ON_SALE', NOW(), NOW()),
