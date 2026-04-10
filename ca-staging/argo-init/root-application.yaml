@@ -13,7 +13,7 @@ spec:
   project: default
   source:
     repoURL: git@github.com:goorm-gongbang/303-goormgb-k8s-helm.git
-    targetRevision: argocd-sync/staging
+    targetRevision: argocd-sync/ca-staging
     path: staging/root
   destination:
     server: https://kubernetes.default.svc
