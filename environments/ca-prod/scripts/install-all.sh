@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Staging EKS Bootstrap Script
+# Prod EKS Bootstrap Script
 # EKS 클러스터에 ArgoCD + External Secrets 설치
 #
 # 사전 조건:
-# 1. kubectl이 staging EKS 클러스터에 연결되어 있어야 함
+# 1. kubectl이 prod EKS 클러스터에 연결되어 있어야 함
 # 2. IRSA가 terraform으로 설정되어 있어야 함 (external-secrets-irsa)
 #
 # Usage:
-#   ./staging/scripts/install-all.sh
+#   ./ca-prod/scripts/install-all.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STAGING_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROD_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # 환경변수 (필요시 오버라이드)
 ARGOCD_URL="${ARGOCD_URL:-http://localhost:8080}"  # port-forward로 접근
@@ -20,7 +20,7 @@ AWS_REGION="${AWS_REGION:-ap-northeast-2}"
 CLUSTER_NAME="${CLUSTER_NAME:-goormgb-prod-eks}"
 
 echo "=================================================="
-echo "  Staging EKS Bootstrap"
+echo "  Prod EKS Bootstrap"
 echo "=================================================="
 echo ""
 echo "ArgoCD URL: $ARGOCD_URL"
@@ -50,7 +50,7 @@ kubectl create namespace external-secrets --dry-run=client -o yaml | kubectl app
 
 # ESO IRSA role ARN (환경변수 또는 terraform에서 자동 감지)
 ESO_IRSA_ROLE_ARN="${ESO_IRSA_ROLE_ARN:-}"
-TERRAFORM_DIR="${TERRAFORM_DIR:-$HOME/Documents/GitHub/301-playball-terraform/environments/staging}"
+TERRAFORM_DIR="${TERRAFORM_DIR:-$HOME/Documents/GitHub/301-playball-terraform/environments/prod}"
 
 if [[ -z "$ESO_IRSA_ROLE_ARN" ]] && [[ -d "$TERRAFORM_DIR" ]]; then
   echo "Detecting ESO IRSA role ARN from terraform..."
@@ -193,7 +193,7 @@ helm repo update
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 
 # Values 파일 다운로드 (303-goormgb-k8s-helm 레포)
-HELM_VALUES_URL="https://raw.githubusercontent.com/goorm-gongbang/303-goormgb-k8s-helm/main/staging/values/core/values-argocd-install.yaml"
+HELM_VALUES_URL="https://raw.githubusercontent.com/goorm-gongbang/303-goormgb-k8s-helm/main/prod/values/core/values-argocd-install.yaml"
 ARGOCD_VALUES_FILE="/tmp/argocd-values.yaml"
 
 echo "Downloading ArgoCD values from helm repo..."
@@ -214,11 +214,14 @@ VALUESEOF
 fi
 
 # Webhook secret (optional)
+AWS_PROFILE="${AWS_PROFILE:-ca}"
+
 WEBHOOK_SECRET=""
 if command -v aws &>/dev/null; then
   WEBHOOK_SECRET=$(aws secretsmanager get-secret-value \
-    --secret-id staging/argocd/webhook-github \
-    --query 'SecretString' --output text 2>/dev/null || echo "")
+    --secret-id prod/argocd \
+    --query 'SecretString' --output text \
+    --profile "$AWS_PROFILE" --region "$AWS_REGION" 2>/dev/null || echo "")
 fi
 
 # ArgoCD 설치 (values 파일 사용)
@@ -250,7 +253,7 @@ echo ""
 #############################################
 echo "=== Setting up GitHub SSH Key ==="
 
-kubectl apply -f "$STAGING_DIR/argo-init/external-secret-github.yaml"
+kubectl apply -f "$PROD_DIR/argo-init/external-secret-github.yaml"
 
 # Secret 생성 대기
 echo "Waiting for repo-goormgb-helm secret..."
@@ -275,7 +278,7 @@ if ! kubectl get secret repo-goormgb-helm -n argocd &>/dev/null; then
   kubectl get externalsecret repo-goormgb-helm -n argocd -o yaml 2>/dev/null | grep -A10 "status:" || true
   echo ""
   echo "Check:"
-  echo "  aws secretsmanager get-secret-value --secret-id staging/argocd/github-ssh --profile ktcloud-team4"
+  echo "  aws secretsmanager get-secret-value --secret-id prod/argocd --profile ca --region ap-northeast-2"
   exit 1
 fi
 
@@ -287,7 +290,7 @@ echo ""
 echo "=== Setting up ArgoCD RBAC ==="
 
 # RBAC ExternalSecret 생성
-kubectl apply -f "$STAGING_DIR/argo-init/external-secret-rbac.yaml"
+kubectl apply -f "$PROD_DIR/argo-init/external-secret-rbac.yaml"
 
 # ExternalSecret 강제 새로고침
 kubectl annotate externalsecret argocd-rbac-eso -n argocd \
@@ -348,18 +351,18 @@ echo ""
 #############################################
 echo "=== Deploying Root Application ==="
 
-kubectl apply -f "$STAGING_DIR/argo-init/root-application.yaml"
+kubectl apply -f "$PROD_DIR/argo-init/root-application.yaml"
 
-echo "Waiting for root-staging app..."
+echo "Waiting for root-prod app..."
 sleep 5
 
 # Refresh trigger
-kubectl annotate application root-staging -n argocd argocd.argoproj.io/refresh=normal --overwrite 2>/dev/null || true
+kubectl annotate application root-prod -n argocd argocd.argoproj.io/refresh=normal --overwrite 2>/dev/null || true
 
 # App 상태 확인
 for i in {1..12}; do
-  health=$(kubectl get application root-staging -n argocd -o jsonpath='{.status.health.status}' 2>/dev/null || echo "")
-  sync=$(kubectl get application root-staging -n argocd -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "")
+  health=$(kubectl get application root-prod -n argocd -o jsonpath='{.status.health.status}' 2>/dev/null || echo "")
+  sync=$(kubectl get application root-prod -n argocd -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "")
   echo "  Checking... ($i/12) [sync=$sync, health=$health]"
   if [[ "$sync" == "Synced" ]]; then
     break

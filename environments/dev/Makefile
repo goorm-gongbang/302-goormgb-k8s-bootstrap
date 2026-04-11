@@ -1,7 +1,10 @@
-# 302-goormgb-k8s-bootstrap Makefile
+# 302-goormgb-k8s-bootstrap/dev Makefile
 # kubeadm 클러스터 초기 설정을 위한 명령어 모음
 
-.PHONY: help install-all install-cilium install-calico-legacy install-storage install-eso install-cert-manager install-istio install-argocd \
+ENV := dev
+ROOT_DIR := $(shell cd ../.. && pwd)
+
+.PHONY: help install-all 01-db-init 02-ai-init install-cilium install-calico-legacy install-storage install-eso install-cert-manager install-istio install-argocd \
         deploy-root-app setup-github-ssh setup-etcd-secret wait-sync run-ddns run-ecr-creds clean-apps clean-all fix-port-conflict \
         rbac-create-users ddns-test ddns-update install-prometheus-crds migrate-to-cilium
 
@@ -188,6 +191,15 @@ ddns-test:
 
 ddns-update:
 	./scripts/ddns/update-now.sh
+
+# === DB 초기화 ===
+01-db-init:
+	@echo "=== Dev: DB 초기화 ==="
+	$(ROOT_DIR)/db/db-init.sh $(ENV)
+
+02-ai-init:
+	@echo "=== Dev: AI Defense DB 초기화 ==="
+	$(ROOT_DIR)/ai/ai-init.sh $(ENV)
 
 # === 정리 ===
 clean-apps:

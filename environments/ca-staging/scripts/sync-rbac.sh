@@ -19,7 +19,7 @@ if ! kubectl get secret argocd-rbac-eso -n argocd &>/dev/null; then
   echo ""
   echo "Check:"
   echo "  kubectl get externalsecret -n argocd"
-  echo "  aws secretsmanager get-secret-value --secret-id staging/oauth/rbac/argocd"
+  echo "  aws secretsmanager get-secret-value --secret-id staging/argocd"
   exit 1
 fi
 
