@@ -125,7 +125,8 @@ if [[ "$IS_CA" == true ]]; then
     RDS_HOST=""
     if [[ -d "$TERRAFORM_DIR" ]]; then
         echo -e "${BLUE}RDS 주소 감지 중 (terraform output)...${NC}"
-        RDS_HOST=$(cd "$TERRAFORM_DIR" && terraform output -json rds 2>/dev/null | jq -r '.address' || echo "")
+        RDS_HOST=$(cd "$TERRAFORM_DIR" && terraform output -json rds 2>/dev/null | jq -r '.address // empty' 2>/dev/null || echo "")
+        [[ "$RDS_HOST" == "null" ]] && RDS_HOST=""
     fi
 
     # DB 정보 (Secrets Manager)
