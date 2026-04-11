@@ -215,6 +215,10 @@ HELM_ARGS=(
   -n argocd
   --create-namespace
   -f "$ARGOCD_VALUES_FILE"
+  --set "global.nodeSelector.role=infra"
+  --set "global.tolerations[0].key=role"
+  --set "global.tolerations[0].value=infra"
+  --set "global.tolerations[0].effect=NoSchedule"
 )
 
 if [[ -n "$WEBHOOK_SECRET" ]]; then
