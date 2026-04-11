@@ -358,6 +358,23 @@ done
 echo ""
 
 #############################################
+# 8. ExternalSecret 리프레시
+#############################################
+echo "=== Refreshing ExternalSecrets ==="
+
+sleep 10  # ArgoCD sync 대기
+
+for ns in staging-webs staging-ai monitoring messaging data argocd; do
+  count=$(kubectl get externalsecret -n "$ns" --no-headers 2>/dev/null | wc -l)
+  if [[ "$count" -gt 0 ]]; then
+    kubectl annotate externalsecret --all -n "$ns" force-sync="$(date +%s)" --overwrite 2>/dev/null
+    echo "  $ns: ${count} ExternalSecrets refreshed"
+  fi
+done
+
+echo ""
+
+#############################################
 # Done
 #############################################
 echo "=================================================="
