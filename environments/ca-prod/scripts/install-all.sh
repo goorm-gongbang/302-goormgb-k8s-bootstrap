@@ -14,10 +14,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROD_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# 환경변수 (필요시 오버라이드)
-ARGOCD_URL="${ARGOCD_URL:-http://localhost:8080}"  # port-forward로 접근
+# CA Prod 고정값
+AWS_PROFILE="${AWS_PROFILE:-ca}"
 AWS_REGION="${AWS_REGION:-ap-northeast-2}"
 CLUSTER_NAME="${CLUSTER_NAME:-goormgb-prod-eks}"
+ESO_IRSA_ROLE_ARN="${ESO_IRSA_ROLE_ARN:-arn:aws:iam::406223549139:role/goormgb-prod-external-secrets-irsa}"
+KARPENTER_ROLE_ARN="${KARPENTER_ROLE_ARN:-arn:aws:iam::406223549139:role/goormgb-prod-karpenter-controller}"
+KARPENTER_QUEUE_NAME="${KARPENTER_QUEUE_NAME:-goormgb-prod-karpenter-interruption}"
+ARGOCD_URL="${ARGOCD_URL:-http://localhost:8080}"
 
 echo "=================================================="
 echo "  Prod EKS Bootstrap"
@@ -193,7 +197,7 @@ helm repo update
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 
 # Values 파일 다운로드 (303-goormgb-k8s-helm 레포)
-HELM_VALUES_URL="https://raw.githubusercontent.com/goorm-gongbang/303-goormgb-k8s-helm/main/prod/values/core/values-argocd-install.yaml"
+HELM_VALUES_URL="https://raw.githubusercontent.com/goorm-gongbang/303-goormgb-k8s-helm/main/ca-prod/values/core/values-argocd-install.yaml"
 ARGOCD_VALUES_FILE="/tmp/argocd-values.yaml"
 
 echo "Downloading ArgoCD values from helm repo..."
@@ -209,7 +213,7 @@ server:
     type: ClusterIP
 configs:
   cm:
-    url: https://argocd.staging.localhost:8080
+    url: https://argocd.playball.one
 VALUESEOF
 fi
 
@@ -341,7 +345,7 @@ if [[ "$RBAC_SYNCED" == "true" ]]; then
   echo "  RBAC setup complete"
 else
   echo "WARNING: RBAC secret not synced within timeout"
-  echo "  Run manually after install: ./staging/scripts/sync-rbac.sh"
+  echo "  Run manually after install: ./scripts/sync-rbac.sh"
 fi
 
 echo ""
