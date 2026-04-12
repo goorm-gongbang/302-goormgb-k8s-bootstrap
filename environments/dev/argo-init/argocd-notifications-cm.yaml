@@ -169,31 +169,38 @@ data:
   # === 인프라용 트리거 ===
   trigger.on-infra-deployed: |
     - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+      oncePer: app.status.operationState.syncResult.revision
       send: [infra-deployed]
 
   trigger.on-infra-deploy-failed: |
     - when: app.status.operationState.phase in ['Error', 'Failed']
+      oncePer: app.status.operationState.syncResult.revision
       send: [infra-deploy-failed]
 
   trigger.on-infra-health-degraded: |
     - when: app.status.health.status == 'Degraded'
+      oncePer: app.status.operationState.syncResult.revision
       send: [infra-health-degraded]
 
   # === 앱용 트리거 ===
   trigger.on-deployed: |
     - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+      oncePer: app.status.operationState.syncResult.revision
       send: [app-deployed]
 
   trigger.on-sync-running: |
     - when: app.status.operationState.phase in ['Running']
+      oncePer: app.status.operationState.syncResult.revision
       send: [app-sync-running]
 
   trigger.on-deploy-failed: |
     - when: app.status.operationState.phase in ['Error', 'Failed']
+      oncePer: app.status.operationState.syncResult.revision
       send: [app-deploy-failed]
 
   trigger.on-health-degraded: |
     - when: app.status.health.status == 'Degraded'
+      oncePer: app.status.operationState.syncResult.revision
       send: [app-health-degraded]
 
   # 기본 트리거 (모든 앱에 적용)
