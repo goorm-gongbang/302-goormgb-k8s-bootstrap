@@ -560,4 +560,20 @@ CREATE TABLE inquiry_answers
     CONSTRAINT uk_inquiry_answers_inquiry_id UNIQUE (inquiry_id)
 );
 
+-- ============================================================
+-- 앱 서비스 유저 권한 부여
+-- 테이블/시퀀스 소유자(goormgb_admin)와 앱 유저(playball_user)가
+-- 다르므로 명시적 GRANT 필요
+-- ============================================================
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'playball_user') THEN
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO playball_user;
+        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO playball_user;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO playball_user;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO playball_user;
+    END IF;
+END
+$$;
+
 COMMIT;
