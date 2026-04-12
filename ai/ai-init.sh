@@ -276,6 +276,58 @@ for sql_file in "${SQL_FILES[@]}"; do
     fi
 done
 
+# ============================================================
+# Baseline Policy Seed Data (idempotent)
+# ============================================================
+echo ""
+echo -e "${BLUE}Baseline policy seed data 삽입 중...${NC}"
+
+NOW_MS=$(date +%s%3N 2>/dev/null || python3 -c "import time; print(int(time.time()*1000))")
+
+PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "
+INSERT INTO policy_versions (policy_version, schema_version, status, source_type, document_json, created_at, activated_at)
+VALUES ('v1.0.0', '1', 'activated', 'manual', '{\"schemaVersion\": \"1\", \"parameters\": {}, \"flags\": {}}', NOW(), NOW())
+ON CONFLICT (policy_version) DO NOTHING;
+
+INSERT INTO policy_rollout_state (rollout_id, stage, base_policy_version, candidate_policy_version, ratio, evaluation_window_seconds, canary_duration_seconds, expand_step_index, stage_started_at_ms, updated_at_ms, current_status, rollback_reason)
+VALUES ('rollout-${ENV}-1', 'baseline', 'v1.0.0', NULL, 1.00000, 300, 0, NULL, ${NOW_MS}, ${NOW_MS}, 'active', NULL)
+ON CONFLICT (rollout_id) DO NOTHING;
+" 2>&1 && echo -e "  ${GREEN}✓${NC} Baseline policy seed 완료" || echo -e "  ${YELLOW}⚠${NC} Seed data 삽입 스킵 (이미 존재)"
+
+# ============================================================
+# Redis Runtime Projection
+# ============================================================
+echo ""
+echo -e "${BLUE}Redis runtime projection 실행 중...${NC}"
+
+# ai-defense pod에서 projection 실행 (kubectl 접근 가능한 경우)
+KUBE_CONTEXT=""
+AI_NAMESPACE=""
+case "$ENV" in
+    ca-staging) KUBE_CONTEXT="ca-staging"; AI_NAMESPACE="staging-ai" ;;
+    ca-prod)    KUBE_CONTEXT="ca-prod";    AI_NAMESPACE="prod-ai" ;;
+    staging)    KUBE_CONTEXT="kj-staging"; AI_NAMESPACE="staging-ai" ;;
+    prod)       KUBE_CONTEXT="kj-prod";    AI_NAMESPACE="prod-ai" ;;
+esac
+
+AI_POD=$(kubectl get pods -n "$AI_NAMESPACE" --context "$KUBE_CONTEXT" -l app=staging-ai-defense -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+if [[ -z "$AI_POD" ]]; then
+    AI_POD=$(kubectl get pods -n "$AI_NAMESPACE" --context "$KUBE_CONTEXT" -l app.kubernetes.io/name=ai-service -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+fi
+
+if [[ -n "$AI_POD" ]]; then
+    kubectl exec -n "$AI_NAMESPACE" --context "$KUBE_CONTEXT" "$AI_POD" -c ai-service -- python3 -c "
+import sys; sys.path.insert(0, '/app/src')
+from traffic_master_ai.defense.backoffice_copilot.storage import run_runtime_projection_resync_from_env
+result = run_runtime_projection_resync_from_env(rollout_id='rollout-${ENV}-1')
+print(result)
+" 2>&1 && echo -e "  ${GREEN}✓${NC} Redis projection 완료" || echo -e "  ${YELLOW}⚠${NC} Redis projection 실패 (수동 실행 필요)"
+else
+    echo -e "  ${YELLOW}⚠${NC} ai-defense Pod을 찾을 수 없음. 배포 후 수동으로 projection을 실행하세요:"
+    echo -e "    kubectl exec -n $AI_NAMESPACE --context $KUBE_CONTEXT deploy/<ai-defense> -c ai-service -- python3 -c \\"
+    echo -e "      \"import sys; sys.path.insert(0, '/app/src'); from traffic_master_ai.defense.backoffice_copilot.storage import run_runtime_projection_resync_from_env; print(run_runtime_projection_resync_from_env(rollout_id='rollout-${ENV}-1'))\""
+fi
+
 echo ""
 echo -e "${GREEN}============================================================${NC}"
 echo -e "${GREEN}  AI Defense DB 초기화 완료! (${HEADER})${NC}"
@@ -288,4 +340,11 @@ SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = 'public'
 ORDER BY table_name;
+"
+
+echo ""
+echo -e "${BLUE}Policy 상태:${NC}"
+PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "
+SELECT policy_version, status, activated_at FROM policy_versions;
+SELECT rollout_id, stage, base_policy_version, current_status FROM policy_rollout_state;
 "
