@@ -37,11 +37,28 @@ data:
         - on-health-degraded
 
   # 템플릿: 배포 성공 (toJson으로 JSON 인젝션 방지)
+  # prev revision + compare 링크 + 변경된 리소스 목록 포함
   template.app-deployed: |
     webhook:
       discord:
         method: POST
         body: |
+          {{- $curr := .app.status.sync.revision -}}
+          {{- $prev := "" -}}
+          {{- if gt (len .app.status.history) 1 -}}
+            {{- $prev = (index .app.status.history (sub (len .app.status.history) 2)).revision -}}
+          {{- end -}}
+          {{- $repo := .app.spec.source.repoURL | trimSuffix ".git" -}}
+          {{- $revText := printf "`%s`" (substr 0 7 $curr) -}}
+          {{- if and $prev (hasPrefix "https://github.com/" $repo) -}}
+            {{- $revText = printf "[`%s → %s`](%s/compare/%s...%s)" (substr 0 7 $prev) (substr 0 7 $curr) $repo $prev $curr -}}
+          {{- end -}}
+          {{- $changed := list -}}
+          {{- range .app.status.operationState.syncResult.resources -}}
+            {{- if and .message (ne .message "no change") -}}
+              {{- $changed = append $changed (printf "• %s/%s — %s" .kind .name .message) -}}
+            {{- end -}}
+          {{- end -}}
           {
             "embeds": [{
               "title": {{ printf "✅ %s 배포 성공" .app.metadata.name | toJson }},
@@ -49,7 +66,10 @@ data:
               "color": 3066993,
               "fields": [
                 {"name": "Namespace", "value": {{ .app.spec.destination.namespace | toJson }}, "inline": true},
-                {"name": "Revision", "value": {{ .app.status.sync.revision | substr 0 7 | toJson }}, "inline": true}
+                {"name": "Revision", "value": {{ $revText | toJson }}, "inline": true}
+                {{- if $changed }},
+                {"name": "변경된 리소스", "value": {{ $changed | join "\n" | substr 0 1000 | toJson }}, "inline": false}
+                {{- end }}
               ],
               "timestamp": {{ .app.status.operationState.finishedAt | toJson }}
             }]
