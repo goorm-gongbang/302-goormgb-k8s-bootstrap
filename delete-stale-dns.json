@@ -1,0 +1,17 @@
+{
+  "Comment": "Delete stale ArgoCD record to let external-dns recreate it",
+  "Changes": [
+    {
+      "Action": "DELETE",
+      "ResourceRecordSet": {
+        "Name": "argocd.playball.one.",
+        "Type": "A",
+        "AliasTarget": {
+          "HostedZoneId": "ZWKZPGTI48KDX",
+          "DNSName": "k8s-prodalb-58e962c721-136682167.ap-northeast-2.elb.amazonaws.com.",
+          "EvaluateTargetHealth": true
+        }
+      }
+    }
+  ]
+}

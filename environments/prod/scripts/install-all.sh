@@ -422,12 +422,31 @@ sleep 5
 kubectl annotate application root-prod -n argocd argocd.argoproj.io/refresh=normal --overwrite 2>/dev/null || true
 
 # App 상태 확인
-for i in {1..12}; do
-  health=$(kubectl get application root-prod -n argocd -o jsonpath='{.status.health.status}' 2>/dev/null || echo "")
+echo "root-prod 앱 동기화 대기 중..."
+for i in {1..30}; do
   sync=$(kubectl get application root-prod -n argocd -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "")
-  echo "  확인 중... ($i/12) [sync=$sync, health=$health]"
-  if [[ "$sync" == "Synced" ]]; then
+  health=$(kubectl get application root-prod -n argocd -o jsonpath='{.status.health.status}' 2>/dev/null || echo "")
+  echo "  [root-prod] 확인 중... ($i/30) [sync=$sync, health=$health]"
+  if [[ "$sync" == "Synced" && "$health" == "Healthy" ]]; then
+    echo "  root-prod 준비 완료!"
     break
+  fi
+  sleep 10
+done
+
+# 핵심 서비스 (ESO Config) 대기 - 시크릿이 없으면 다른 앱들이 실패함
+echo "eso-config (시크릿 동기화 앱) 준비 대기 중..."
+for i in {1..30}; do
+  sync=$(kubectl get application eso-config -n argocd -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "")
+  health=$(kubectl get application eso-config -n argocd -o jsonpath='{.status.health.status}' 2>/dev/null || echo "")
+  echo "  [eso-config] 확인 중... ($i/30) [sync=$sync, health=$health]"
+  if [[ "$sync" == "Synced" && "$health" == "Healthy" ]]; then
+    echo "  eso-config 준비 완료! (이제 시크릿이 정상적으로 생성됩니다)"
+    break
+  fi
+  # 강제 리프레시 시도 (동기화 속도 향상)
+  if [[ $((i % 5)) -eq 0 ]]; then
+    kubectl annotate application eso-config -n argocd argocd.argoproj.io/refresh=normal --overwrite 2>/dev/null || true
   fi
   sleep 10
 done
