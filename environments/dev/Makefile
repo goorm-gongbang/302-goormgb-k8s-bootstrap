@@ -132,6 +132,10 @@ install-sealed-secrets:
 	@echo "=== Installing Sealed Secrets Controller ==="
 	./scripts/sealed-secrets/install.sh
 
+install-sealed-tools:
+	@echo "=== Installing kubeseal + yq ==="
+	./scripts/sealed-secrets/install-tools.sh
+
 backup-sealed-key:
 	@echo "=== Backing up Sealing Key ==="
 	./scripts/sealed-secrets/backup-key.sh
@@ -139,6 +143,12 @@ backup-sealed-key:
 seal-secrets:
 	@echo "=== Sealing existing K8s Secrets ==="
 	./scripts/sealed-secrets/seal-existing-secrets.sh
+
+# 한 번에: 도구 설치 → 키 백업 → 시크릿 변환
+sealed-migrate: install-sealed-tools backup-sealed-key seal-secrets
+	@echo ""
+	@echo "=== 마이그레이션 완료 ==="
+	@echo "다음: 출력된 YAML을 303 레포 dev/sealed-secrets/templates/ 에 복사 후 push"
 
 # [DEPRECATED] ESO — Sealed Secrets로 대체
 install-eso:
