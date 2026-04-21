@@ -4,9 +4,9 @@
 ENV := dev
 ROOT_DIR := $(shell cd ../.. && pwd)
 
-.PHONY: help install-all 01-db-init 02-ai-init install-cilium install-calico-legacy install-storage install-eso install-cert-manager install-istio install-argocd \
+.PHONY: help install-all 01-db-init 02-ai-init install-cilium install-calico-legacy install-storage install-sealed-secrets install-eso install-cert-manager install-istio install-argocd \
         deploy-root-app setup-github-ssh setup-etcd-secret wait-sync run-ddns run-ecr-creds clean-apps clean-all fix-port-conflict \
-        rbac-create-users ddns-test ddns-update install-prometheus-crds migrate-to-cilium
+        rbac-create-users ddns-test ddns-update install-prometheus-crds migrate-to-cilium backup-sealed-key seal-secrets
 
 # 기본 타겟
 help:
@@ -20,8 +20,11 @@ help:
 	@echo "  make install-calico-legacy - Calico CNI 설치 (레거시, _install.sh)"
 	@echo "  make migrate-to-cilium - Calico → Cilium 마이그레이션 (주의: 다운타임 발생)"
 	@echo "  make install-storage   - Local Path Provisioner 설치 (StorageClass)"
-	@echo "  make install-eso       - External Secrets Operator 설치"
-	@echo "  make bootstrap-aws     - AWS credentials 등록 (수동 입력)"
+	@echo "  make install-sealed-secrets - Sealed Secrets Controller 설치 (ESO 대체)"
+	@echo "  make backup-sealed-key - Sealing key SSM 백업 (설치 후 필수)"
+	@echo "  make seal-secrets      - 기존 K8s Secret → SealedSecret 변환"
+	@echo "  make install-eso       - [DEPRECATED] External Secrets Operator 설치"
+	@echo "  make bootstrap-aws     - [DEPRECATED] AWS credentials 등록 (수동 입력)"
 	@echo "  make install-cert-manager - cert-manager 설치"
 	@echo "  make install-istio     - Istio 설치"
 	@echo "  make install-prometheus-crds - Prometheus Operator CRD 설치"
@@ -47,7 +50,7 @@ setup-node-labels:
 	@kubectl get nodes --show-labels | grep -E "NAME|node-role"
 
 # === 전체 설치 ===
-install-all: setup-node-labels install-cilium install-storage install-eso bootstrap-aws install-cert-manager install-istio install-prometheus-crds install-argocd setup-github-ssh deploy-root-app setup-etcd-secret wait-sync run-ecr-creds run-ddns
+install-all: setup-node-labels install-cilium install-storage install-sealed-secrets install-cert-manager install-istio install-prometheus-crds install-argocd setup-github-ssh deploy-root-app setup-etcd-secret wait-sync run-ecr-creds run-ddns
 	@echo ""
 	@echo "=== All components installed ==="
 	@echo ""
@@ -125,12 +128,25 @@ install-storage:
 	@echo "=== Installing Local Path Provisioner ==="
 	./scripts/storage/install.sh
 
+install-sealed-secrets:
+	@echo "=== Installing Sealed Secrets Controller ==="
+	./scripts/sealed-secrets/install.sh
+
+backup-sealed-key:
+	@echo "=== Backing up Sealing Key ==="
+	./scripts/sealed-secrets/backup-key.sh
+
+seal-secrets:
+	@echo "=== Sealing existing K8s Secrets ==="
+	./scripts/sealed-secrets/seal-existing-secrets.sh
+
+# [DEPRECATED] ESO — Sealed Secrets로 대체
 install-eso:
-	@echo "=== Installing ESO ==="
+	@echo "=== [DEPRECATED] Installing ESO ==="
 	./scripts/eso/install.sh
 
 bootstrap-aws:
-	@echo "=== Bootstrapping AWS credentials ==="
+	@echo "=== [DEPRECATED] Bootstrapping AWS credentials ==="
 	./scripts/eso/bootstrap-aws.sh
 
 install-cert-manager:
